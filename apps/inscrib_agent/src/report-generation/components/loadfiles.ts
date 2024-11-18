@@ -1,80 +1,97 @@
 import { Injectable } from '@nestjs/common';
-import {AgentStateChannels } from "../components/shared-interfaces"
-import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { JSONLoader } from "langchain/document_loaders/fs/json";
-import { TextLoader } from "langchain/document_loaders/fs/text";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { googleLLMService } from './google';
+import { AgentStateChannels } from '../components/shared-interfaces';
+import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
+import { JSONLoader } from 'langchain/document_loaders/fs/json';
+import { TextLoader } from 'langchain/document_loaders/fs/text';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { ConfigService } from '@nestjs/config';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 
-
+//load conversation files
+// load and split the files
+// load the files and split them into chunks
+// summary the text and extract servral key words in the end
+// send the data to the next step
 @Injectable()
 export class LoadfilesService {
-    constructor(
-        private googleLLMService:googleLLMService,
-    ) {}
-    async loadfiles(
-        state: AgentStateChannels,
-    ) {
-        const { DocsPath } = state;
-        //下载文件前先判断类型
-        let loader;
-        let error;
-        if (DocsPath.endsWith('.docx')) {
-            loader = new DocxLoader(DocsPath);
-        } else if (DocsPath.endsWith('.pdf')) {
-            loader = new PDFLoader(DocsPath);
-        } else if (DocsPath.endsWith('.json')) {
-            loader = new JSONLoader(DocsPath);
-        }else if (DocsPath.endsWith('.txt')) { 
-            loader = new TextLoader(DocsPath);
-        }else {
-            error = 'Unsupported file type';
-            throw new Error('Unsupported file type'); 
-        }
-        //加载文件
-        const chunks = await loader.load();
-        //分割文本
-        const splitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 1000,
-            chunkOverlap: 100,
-        });
-        const texts = await splitter.splitDocuments(chunks);
-        //对每个文本块进行总结
-         // 使用 Promise.all 优化性能
-         const processedTexts = await Promise.all(
-            texts.map(async (textChunk, index) => {
-                try {
-                    const text = textChunk.pageContent;
-                    console.log(text);
-                    // 确保 googleLLMService 存在且方法名正确
-                    if (!this.googleLLMService || typeof this.googleLLMService.summaryText !== 'function') {
-                        throw new Error('googleLLMService.summaryText is not available');
-                    }
-                    console.log('googleLLMService.summaryText is available');
-                    const summaryText = await this.googleLLMService.summaryText(text);
-                    console.log(summaryText);
-                    return {
-                        ...textChunk,
-                        metadata: {
-                            ...textChunk.metadata,
-                            summary: summaryText
-                        }
-                    };
-                } catch (err) {
-                    return textChunk; // 返回原始块，不带总结
-                }
-            })
-        );
-        return {
-            ...state,
-            Status: 'chunked',
-            Chunks:processedTexts,
-            Error: error,
-            MetaData: {
-                ...state.MetaData,
-                processingSteps: [...state.MetaData.processingSteps, 'document_loaded'],
+  constructor(private readonly configService: ConfigService) {}
+
+  async summaryText(input: string): Promise<string> {
+    const llm = new ChatGoogleGenerativeAI({
+      model: 'gemini-1.5-flash',
+      temperature: 0,
+      apiKey: this.configService.get<string>('ALL_IN_ONE_KEY'),
+      baseUrl: `${this.configService.get<string>('PROXY_URL')}/google`,
+    });
+    const messages = [
+      new SystemMessage(
+        'summary the text below and extract servral key words in the end',
+      ),
+      new HumanMessage(input),
+    ];
+    const response = await llm.invoke(messages);
+    console.log(response);
+    return response.content.toString();
+  }
+  //filetype check
+  filetypeCheck(file) {
+    if (file.endsWith('.docx')) {
+      return new DocxLoader(file);
+    } else if (file.endsWith('.pdf')) {
+      return new PDFLoader(file);
+    } else if (file.endsWith('.json')) {
+      return new JSONLoader(file);
+    } else if (file.endsWith('.txt')) {
+      return new TextLoader(file);
+    } else {
+      return 'Unsupported file type';
+    }
+  }
+
+  loadfiles = async (state: AgentStateChannels) => {
+    const { DocsPath } = state;
+    let error;
+    const loader = this.filetypeCheck(DocsPath);
+    if (typeof loader === 'string') {
+      throw new Error(loader);
+    }
+    const chunks = await loader.load();
+    const splitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 2000,
+      chunkOverlap: 100,
+    });
+    const texts = await splitter.splitDocuments(chunks);
+
+    const processedTexts = await Promise.all(
+      texts.map(async (textChunk) => {
+        try {
+          const text = textChunk.pageContent;
+          const summaryText = await this.summaryText(text);
+          return {
+            ...textChunk,
+            metadata: {
+              ...textChunk.metadata,
+              summary: summaryText,
             },
           };
-    }
+        } catch (err) {
+          console.error(err);
+          return textChunk; // 返回原始块，不带总结
+        }
+      }),
+    );
+
+    return {
+      ...state,
+      Status: 'chunked',
+      Chunks: processedTexts,
+      Error: error,
+      MetaData: {
+        ...state.MetaData,
+        processingSteps: [...state.MetaData.processingSteps, 'document_loaded'],
+      },
+    };
+  }
 }
