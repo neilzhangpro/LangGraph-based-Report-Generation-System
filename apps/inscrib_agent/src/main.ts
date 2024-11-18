@@ -7,10 +7,10 @@ import * as path from 'path';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // 确保上传目录存在
-  const uploadsDir = path.join(__dirname, '..', 'uploads');
+  /*const uploadsDir = path.join(__dirname, '..', 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
-  }
+  }*/
   //swagger
   const config = new DocumentBuilder()
     .setTitle('Inscrib Agent')

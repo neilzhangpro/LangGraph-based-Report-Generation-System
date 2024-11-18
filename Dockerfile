@@ -22,6 +22,6 @@ RUN yarn build
 # 暴露端口（根据你的应用配置修改）
 EXPOSE 3000
 # 切换到非 root 用户
-USER node
+USER root
 # 运行应用
 CMD [ "yarn", "start:prod" ]

@@ -1,8 +1,32 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/inscrib_agent/src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/inscrib_agent/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/inscrib_agent",
+  "projects": {
+    "inscrib_agent": {
+      "type": "application",
+      "root": "apps/inscrib_agent",
+      "entryFile": "main",
+      "sourceRoot": "apps/inscrib_agent/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/inscrib_agent/tsconfig.app.json"
+      }
+    },
+    "report-generation": {
+      "type": "application",
+      "root": "apps/report-generation",
+      "entryFile": "main",
+      "sourceRoot": "apps/report-generation/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/report-generation/tsconfig.app.json"
+      }
+    }
   }
 }

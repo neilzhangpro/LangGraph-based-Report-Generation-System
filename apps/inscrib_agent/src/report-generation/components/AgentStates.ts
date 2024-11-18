@@ -1,0 +1,38 @@
+import { Injectable } from '@nestjs/common';
+import { END, Annotation, StateGraphArgs } from "@langchain/langgraph";
+import { BaseMessage } from "@langchain/core/messages";
+import {AgentStateChannels } from "../components/shared-interfaces"
+
+@Injectable()
+export class AgentStatesService {   
+  // This defines the object that is passed between each node
+agentStateChannels: StateGraphArgs<AgentStateChannels>["channels"] = {
+  DocsPath: {
+    value: (x?, y?) => y ?? x ?? '',
+    default: () => '',
+  },
+  TemplatePath:{
+    value: (x?, y?) => y ?? x ?? '',
+    default: () => '',
+  },
+  Status: {
+    value: (x?, y?) => y ?? x ?? 'initial',
+    default: () => 'initial',
+  },
+  Chunks: {
+    value: (x?: Document[], y?: Document[]) => y ?? x ?? [],
+    default: () => [],
+  },
+  MetaData: {
+    value: (x?, y?) => ({
+      ...(x ?? { startTime: Date.now(), processingSteps: [] }),
+      ...(y ?? {}),
+      lastUpdated: Date.now(),
+    }),
+    default: () => ({
+      startTime: Date.now(),
+      lastUpdated: Date.now(),
+      processingSteps: [],
+    }),
+  }
+}}
