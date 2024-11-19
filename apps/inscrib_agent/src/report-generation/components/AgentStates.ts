@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { StateGraphArgs } from '@langchain/langgraph';
 import { AgentStateChannels } from '../components/shared-interfaces';
 
+
 @Injectable()
 export class AgentStatesService {
   // This defines the object that is passed between each node
@@ -21,6 +22,11 @@ export class AgentStatesService {
     Chunks: {
       value: (x?: Document[], y?: Document[]) => y ?? x ?? [],
       default: () => [],
+    },
+    Report: {
+      value: (x?, y?) => y ?? x ?? {},
+      // eslint-disable-next-line prettier/prettier
+      default: () => ({}),
     },
     MetaData: {
       value: (x?, y?) => ({

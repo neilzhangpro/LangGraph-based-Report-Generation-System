@@ -5,9 +5,7 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { JSONLoader } from 'langchain/document_loaders/fs/json';
 import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ConfigService } from '@nestjs/config';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { googleLLMService } from '../components/google';
 
 //load conversation files
@@ -19,7 +17,7 @@ import { googleLLMService } from '../components/google';
 export class LoadfilesService {
   constructor(
     private readonly googleLLMService: googleLLMService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
 
   //filetype check
@@ -74,11 +72,12 @@ export class LoadfilesService {
       ...state,
       Status: 'chunked',
       Chunks: processedTexts,
+      Report: {},
       Error: error,
       MetaData: {
         ...state.MetaData,
         processingSteps: [...state.MetaData.processingSteps, 'document_loaded'],
       },
     };
-  }
+  };
 }
