@@ -52,7 +52,7 @@ export class ReportGenerationController {
           },
       }),
       fileFilter: (req, file, cb) => {
-          const allowedMimeTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+          const allowedMimeTypes = ['application/json', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
           if (allowedMimeTypes.includes(file.mimetype)) {
               cb(null, true);
           } else {

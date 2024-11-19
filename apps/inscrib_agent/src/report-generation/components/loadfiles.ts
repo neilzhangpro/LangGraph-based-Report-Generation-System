@@ -8,6 +8,7 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ConfigService } from '@nestjs/config';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { googleLLMService } from '../components/google';
 
 //load conversation files
 // load and split the files
@@ -16,25 +17,11 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 // send the data to the next step
 @Injectable()
 export class LoadfilesService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly googleLLMService: googleLLMService,
+    private readonly configService: ConfigService
+  ) {}
 
-  async summaryText(input: string): Promise<string> {
-    const llm = new ChatGoogleGenerativeAI({
-      model: 'gemini-1.5-flash',
-      temperature: 0,
-      apiKey: this.configService.get<string>('ALL_IN_ONE_KEY'),
-      baseUrl: `${this.configService.get<string>('PROXY_URL')}/google`,
-    });
-    const messages = [
-      new SystemMessage(
-        'summary the text below and extract servral key words in the end',
-      ),
-      new HumanMessage(input),
-    ];
-    const response = await llm.invoke(messages);
-    console.log(response);
-    return response.content.toString();
-  }
   //filetype check
   filetypeCheck(file) {
     if (file.endsWith('.docx')) {
@@ -68,7 +55,7 @@ export class LoadfilesService {
       texts.map(async (textChunk) => {
         try {
           const text = textChunk.pageContent;
-          const summaryText = await this.summaryText(text);
+          const summaryText = await this.googleLLMService.summaryText(text);
           return {
             ...textChunk,
             metadata: {

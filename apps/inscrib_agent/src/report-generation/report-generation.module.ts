@@ -3,8 +3,8 @@ import { ReportGenerationService } from './report-generation.service';
 import { ReportGenerationController } from './report-generation.controller';
 import { AgentStatesService } from './components/AgentStates';
 import { LoadfilesService } from './components/loadfiles';
-import { TestNodeService } from './components/testNode';
 import { googleLLMService } from './components/google';
+import { WriterAgentService } from './components/writerAgent';
 
 @Module({
   controllers: [ReportGenerationController],
@@ -12,9 +12,9 @@ import { googleLLMService } from './components/google';
     ReportGenerationService,
     AgentStatesService,
     LoadfilesService,
-    TestNodeService,
     googleLLMService,
+    WriterAgentService
   ],
-  exports: [ReportGenerationService, googleLLMService],
+  exports: [ReportGenerationService, googleLLMService,LoadfilesService,WriterAgentService],
 })
 export class ReportGenerationModule {}

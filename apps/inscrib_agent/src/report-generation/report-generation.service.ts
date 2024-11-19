@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import  { START,StateGraph,END, StateGraphArgs } from '@langchain/langgraph'
 import { LoadfilesService } from './components/loadfiles';
-import { TestNodeService } from './components/testNode';
 import {  BaseMessage, HumanMessage } from '@langchain/core/messages';
 import {AgentStateChannels } from "./components/shared-interfaces"
 import {AgentStatesService } from "./components/AgentStates"
+import { WriterAgentService } from './components/writerAgent';
 
   
 
@@ -15,7 +15,7 @@ export class ReportGenerationService {
     constructor(
         private AgentStatesService:AgentStatesService,
         private loadfilesService: LoadfilesService,
-        private testNodeService: TestNodeService,
+        private WriterAgentService: WriterAgentService
     ) {}
 
     
@@ -24,10 +24,10 @@ export class ReportGenerationService {
     const workflow = new StateGraph<AgentStateChannels>({
       channels: this.AgentStatesService.agentStateChannels,
     }).addNode("start", this.loadfilesService.loadfiles)
-      .addNode("testNode", this.testNodeService.testNode)
+      .addNode("writer", this.WriterAgentService.run)
       .addEdge(START, "start")
-      .addEdge("start","testNode")
-      .addEdge("testNode", END)
+      .addEdge("start","writer")
+      .addEdge("writer", END)
 
     const graph = workflow.compile();
     return graph;
