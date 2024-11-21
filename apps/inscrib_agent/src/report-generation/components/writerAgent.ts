@@ -1,17 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { googleLLMService } from '../components/google';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { ConfigService } from '@nestjs/config';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { SystemMessage } from '@langchain/core/messages';
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { createToolCallingAgent } from "langchain/agents";
-import { AgentExecutor } from "langchain/agents";
-import { StructuredOutputParser } from "@langchain/core/output_parsers";
-import { RunnableSequence } from "@langchain/core/runnables";
-import { RunnableLambda } from "@langchain/core/runnables";
+import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { createToolCallingAgent } from 'langchain/agents';
+import { AgentExecutor } from 'langchain/agents';
+import { StructuredOutputParser } from '@langchain/core/output_parsers';
+import { RunnableLambda } from '@langchain/core/runnables';
 
 @Injectable()
 export class WriterAgentService {
@@ -149,8 +146,8 @@ export class WriterAgentService {
     return Response;
   }
 
-  createAgent = async (state:any) => {
-    const {Status} = state;
+  createAgent = async (state: any) => {
+    const { Status } = state;
     //tools
     const searchTool = tool(
       (query) => {
@@ -169,20 +166,26 @@ export class WriterAgentService {
       },
     );
     const tools = [searchTool];
-    let promptIn = "Your role: Psychological Clinic Doctor.Your behavior:1.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.2.During the writing process, you can use related tools to conduct searches or conceptual queries.3.Wrap the output in json {format_instructions}.4.Please provide your response as a clean JSON object without markdown formatting. The conversation records are as follows:{docs}";
-    if(Status === "reviewed"){
-      promptIn = "Your role: Psychological Clinic Doctor.Your behavior:1. You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.2. The first draft of your report will be handed over to your partner, a psychological and psychiatric scientist, for evaluation. He will propose some revisions. You must refer to the revisions and revise the corresponding parts of the report until he does not propose new ones. Until the comments are revised.3. During the writing process, you can use related tools to conduct searches or conceptual queries.4. Strictly adhere to the opinions of scientists, otherwise you will be punished.5.Wrap the output in json {format_instructions}.6.Please provide your response as a clean JSON object without markdown formatting. The raw conversation records are as follows:{docs}The feedback from the scientists is as follows:{feedback}";
+    let promptIn =
+      'Your role: Psychological Clinic Doctor.Your behavior:1.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.2.During the writing process, you can use related tools to conduct searches or conceptual queries.3.Wrap the output in json {format_instructions}.4.Please provide your response as a clean JSON object without markdown formatting. The conversation records are as follows:{docs}';
+    if (Status === 'reviewed') {
+      promptIn =
+        'Your role: Psychological Clinic Doctor.Your behavior:1. You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.2. The first draft of your report will be handed over to your partner, a psychological and psychiatric scientist, for evaluation. He will propose some revisions. You must refer to the revisions and revise the corresponding parts of the report until he does not propose new ones. Until the comments are revised.3. During the writing process, you can use related tools to conduct searches or conceptual queries.4. Strictly adhere to the opinions of scientists, otherwise you will be punished.5.Wrap the output in json {format_instructions}.6.Please provide your response as a clean JSON object without markdown formatting. The raw conversation records are as follows:{docs}The feedback from the scientists is as follows:{feedback}';
     }
     //创建写作agent
     const prompt = ChatPromptTemplate.fromMessages([
-      ["system", promptIn],
-      ["placeholder", "{agent_scratchpad}"],
+      ['system', promptIn],
+      ['placeholder', '{agent_scratchpad}'],
     ]);
     const parser = StructuredOutputParser.fromZodSchema(this.responStructure());
     const partialedPrompt = await prompt.partial({
       format_instructions: parser.getFormatInstructions(),
     });
-    const agent = await createToolCallingAgent({ llm: this.googleLLMService.llm, tools, prompt: partialedPrompt });
+    const agent = await createToolCallingAgent({
+      llm: this.googleLLMService.llm,
+      tools,
+      prompt: partialedPrompt,
+    });
     const agentExecutor = new AgentExecutor({
       agent,
       tools,
@@ -191,20 +194,20 @@ export class WriterAgentService {
   };
 
   run = async (state: any) => {
-    const { Chunks,Status,Feedback } = state;
+    const { Chunks, Status, Feedback } = state;
     const agentExecutor = await this.createAgent(state);
     const parser = StructuredOutputParser.fromZodSchema(this.responStructure());
     //定义一个chain来格式化输出
-    const chain = RunnableLambda.from(async (input)=>{
+    const chain = RunnableLambda.from(async (input) => {
       const data = await agentExecutor.invoke(input);
       return data.output;
     }).pipe(parser);
 
     let reportsData;
-    if (Status === "reviewed") {
-      reportsData = await chain.invoke({docs: Chunks,feedback:Feedback});
-    }else{
-      reportsData = await chain.invoke({docs: Chunks});
+    if (Status === 'reviewed') {
+      reportsData = await chain.invoke({ docs: Chunks, feedback: Feedback });
+    } else {
+      reportsData = await chain.invoke({ docs: Chunks });
     }
     return {
       ...state,
