@@ -6,6 +6,12 @@ import { ConfigService } from '@nestjs/config';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { SystemMessage } from '@langchain/core/messages';
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { createToolCallingAgent } from "langchain/agents";
+import { AgentExecutor } from "langchain/agents";
+import { StructuredOutputParser } from "@langchain/core/output_parsers";
+import { RunnableSequence } from "@langchain/core/runnables";
+import { RunnableLambda } from "@langchain/core/runnables";
 
 @Injectable()
 export class WriterAgentService {
@@ -140,11 +146,12 @@ export class WriterAgentService {
           'List of Positive Psychology Activities and Recommendations,such as Gratitude Practice,Strength Identification and Use and so on.You can search for more activities in the Positive Psychology field which can be helpful for the client.',
         ),
     });
-    const finalResponseTool = tool(async () => 'mocked value', {
-      name: 'Response',
-      description: 'Always respond to the user using this tool.',
-      schema: Response,
-    });
+    return Response;
+  }
+
+  createAgent = async (state:any) => {
+    const {Status} = state;
+    //tools
     const searchTool = tool(
       (query) => {
         const searchOnline = new TavilySearchResults({
@@ -161,30 +168,48 @@ export class WriterAgentService {
         }),
       },
     );
-    const tools = [finalResponseTool, searchTool];
-    return tools;
-  }
+    const tools = [searchTool];
+    let promptIn = "Your role: Psychological Clinic Doctor.Your behavior:1.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.2.During the writing process, you can use related tools to conduct searches or conceptual queries.3.Wrap the output in json {format_instructions}.4.Please provide your response as a clean JSON object without markdown formatting. The conversation records are as follows:{docs}";
+    if(Status === "reviewed"){
+      promptIn = "Your role: Psychological Clinic Doctor.Your behavior:1. You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.2. The first draft of your report will be handed over to your partner, a psychological and psychiatric scientist, for evaluation. He will propose some revisions. You must refer to the revisions and revise the corresponding parts of the report until he does not propose new ones. Until the comments are revised.3. During the writing process, you can use related tools to conduct searches or conceptual queries.4. Strictly adhere to the opinions of scientists, otherwise you will be punished.5.Wrap the output in json {format_instructions}.6.Please provide your response as a clean JSON object without markdown formatting. The raw conversation records are as follows:{docs}The feedback from the scientists is as follows:{feedback}";
+    }
+    //创建写作agent
+    const prompt = ChatPromptTemplate.fromMessages([
+      ["system", promptIn],
+      ["placeholder", "{agent_scratchpad}"],
+    ]);
+    const parser = StructuredOutputParser.fromZodSchema(this.responStructure());
+    const partialedPrompt = await prompt.partial({
+      format_instructions: parser.getFormatInstructions(),
+    });
+    const agent = await createToolCallingAgent({ llm: this.googleLLMService.llm, tools, prompt: partialedPrompt });
+    const agentExecutor = new AgentExecutor({
+      agent,
+      tools,
+    });
+    return agentExecutor;
+  };
 
   run = async (state: any) => {
-    const { Chunks } = state;
-    const tools = this.responStructure();
-    //创建写作agent
-    const writerAgent = createReactAgent({
-      llm: this.googleLLMService.llm,
-      tools: tools,
-      messageModifier: new SystemMessage(
-        'You are an expert in psychological counseling. Please combine the following psychological diagnosis and treatment conversation records and the tools you can use to write a professional psychological counseling report. The conversation records are as follows:{docs}',
-      ),
-    });
-    //运行agent
-    const response = await writerAgent.invoke({ docs: Chunks });
-    const data = response.messages?.[0]?.tool_calls?.[0]?.args;
-    console.log(data);
+    const { Chunks,Status,Feedback } = state;
+    const agentExecutor = await this.createAgent(state);
+    const parser = StructuredOutputParser.fromZodSchema(this.responStructure());
+    //定义一个chain来格式化输出
+    const chain = RunnableLambda.from(async (input)=>{
+      const data = await agentExecutor.invoke(input);
+      return data.output;
+    }).pipe(parser);
+
+    let reportsData;
+    if (Status === "reviewed") {
+      reportsData = await chain.invoke({docs: Chunks,feedback:Feedback});
+    }else{
+      reportsData = await chain.invoke({docs: Chunks});
+    }
     return {
       ...state,
       Status: 'written',
-      Chunks: [],
-      Report: data,
+      Report: reportsData,
       MetaData: {
         ...state.MetaData,
         processingSteps: [

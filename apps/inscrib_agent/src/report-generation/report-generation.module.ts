@@ -5,6 +5,7 @@ import { AgentStatesService } from './components/AgentStates';
 import { LoadfilesService } from './components/loadfiles';
 import { googleLLMService } from './components/google';
 import { WriterAgentService } from './components/writerAgent';
+import { CheckerAgentService } from './components/checkerAgent';
 
 @Module({
   controllers: [ReportGenerationController],
@@ -13,8 +14,9 @@ import { WriterAgentService } from './components/writerAgent';
     AgentStatesService,
     LoadfilesService,
     googleLLMService,
-    WriterAgentService
+    WriterAgentService,
+    CheckerAgentService,
   ],
-  exports: [ReportGenerationService, googleLLMService,LoadfilesService,WriterAgentService],
+  exports: [ReportGenerationService, googleLLMService,LoadfilesService,WriterAgentService,CheckerAgentService],
 })
 export class ReportGenerationModule {}

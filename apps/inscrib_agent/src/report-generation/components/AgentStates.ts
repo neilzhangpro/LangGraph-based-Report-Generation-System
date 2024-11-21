@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { StateGraphArgs } from '@langchain/langgraph';
+import { Annotation, StateGraphArgs } from '@langchain/langgraph';
 import { AgentStateChannels } from '../components/shared-interfaces';
 
 
@@ -27,6 +27,10 @@ export class AgentStatesService {
       value: (x?, y?) => y ?? x ?? {},
       // eslint-disable-next-line prettier/prettier
       default: () => ({}),
+    },
+    next: {
+      value: (x?, y?) => y ?? x ?? 'start',
+      default: () => 'start',
     },
     MetaData: {
       value: (x?, y?) => ({

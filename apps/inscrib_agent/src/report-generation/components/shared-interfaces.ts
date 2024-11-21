@@ -4,13 +4,15 @@ export interface AgentStateChannels {
   Status:
     | 'initial'
     | 'chunked'
-    | 'processed'
-    | 'analyzed'
+    | 'written'
+    | 'reviewed'
     | 'completed'
     | 'error';
-  Chunks: Document[];
+  Chunks?: Document[];
   Error?: string;
+  next: string;
   Report?: object;
+  Feedback?: string;
   MetaData: {
     startTime: number;
     lastUpdated: number;
