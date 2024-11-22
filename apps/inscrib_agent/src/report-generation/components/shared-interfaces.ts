@@ -12,6 +12,7 @@ export interface AgentStateChannels {
   Error?: string;
   next: string;
   Report?: object;
+  userId: string;
   Feedback?: string;
   MetaData: {
     startTime: number;

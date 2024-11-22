@@ -25,9 +25,10 @@ export class ReportGenerationController {
   ) {}
 
   @Get('/test')
+  @ApiQuery({ name: 'userId', required: true, type: String })
   @ApiQuery({ name: 'DocsPath', required: true, type: String })
   @ApiQuery({ name: 'TemplatePath', required: false, type: String })
-  async getHello(@Query() query: { DocsPath: string; TemplatePath: string }) {
+  async getHello(@Query() query: { DocsPath: string; TemplatePath: string, userId: string }): Promise<any> {
     try {
       return this.reportGenerationService.getHello(query);
     } catch (e) {

@@ -7,6 +7,8 @@ import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { ConfigService } from '@nestjs/config';
 import { googleLLMService } from '../components/google';
+import { VectorService } from '../../vector/vector.service';
+import { v4 as uuidv4 } from 'uuid';
 
 //load conversation files
 // load and split the files
@@ -17,6 +19,7 @@ import { googleLLMService } from '../components/google';
 export class LoadfilesService {
   constructor(
     private readonly googleLLMService: googleLLMService,
+    private readonly vectorService: VectorService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -36,7 +39,7 @@ export class LoadfilesService {
   }
 
   loadfiles = async (state: AgentStateChannels) => {
-    const { DocsPath } = state;
+    const { DocsPath,userId } = state;
     let error;
     const loader = this.filetypeCheck(DocsPath);
     if (typeof loader === 'string') {
@@ -54,20 +57,22 @@ export class LoadfilesService {
         try {
           const text = textChunk.pageContent;
           const summaryText = await this.googleLLMService.summaryText(text);
-          return {
+            return {
             ...textChunk,
             metadata: {
               ...textChunk.metadata,
               summary: summaryText,
+              userId: `${userId}-${uuidv4()}`,
             },
-          };
+            };
         } catch (err) {
           console.error(err);
           return textChunk; // 返回原始块，不带总结
         }
       }),
     );
-
+    //写入到向量数据库供以后搜索
+    await this.vectorService.storeInChromaDBDirectly(processedTexts);
     return {
       ...state,
       Status: 'chunked',

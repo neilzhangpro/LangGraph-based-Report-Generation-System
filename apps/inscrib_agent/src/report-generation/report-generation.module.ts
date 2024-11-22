@@ -6,6 +6,7 @@ import { LoadfilesService } from './components/loadfiles';
 import { googleLLMService } from './components/google';
 import { WriterAgentService } from './components/writerAgent';
 import { CheckerAgentService } from './components/checkerAgent';
+import { VectorService } from '../vector/vector.service';
 
 @Module({
   controllers: [ReportGenerationController],
@@ -16,7 +17,8 @@ import { CheckerAgentService } from './components/checkerAgent';
     googleLLMService,
     WriterAgentService,
     CheckerAgentService,
+    VectorService,
   ],
-  exports: [ReportGenerationService, googleLLMService,LoadfilesService,WriterAgentService,CheckerAgentService],
+  exports: [ReportGenerationService, googleLLMService,LoadfilesService,WriterAgentService,CheckerAgentService,VectorService],
 })
 export class ReportGenerationModule {}

@@ -61,6 +61,18 @@ export class VectorService {
             throw new Error(`Error searching documents in Chroma: ${error.message}`);
         }
     }
+    
+    async storeInChromaDBDirectly(documents: Document[]): Promise<void> {
+        try {
+            await this.chromaClient.addDocuments(documents, {
+                ids: documents.map(doc => doc.metadata.userId)
+            });
+            console.log("Documents successfully added to Chroma");
+        } catch (error) {
+            console.error("Error adding documents to Chroma:", error);
+            throw new Error(`Error storing documents in Chroma: ${error.message}`);
+        }
+    }
     async storeInChromaDB(userId: string, file: Express.Multer.File, text: string): Promise<void> {
             try {
                 const document1: Document = {

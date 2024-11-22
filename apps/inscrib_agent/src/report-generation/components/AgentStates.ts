@@ -19,6 +19,10 @@ export class AgentStatesService {
       value: (x?, y?) => y ?? x ?? 'initial',
       default: () => 'initial',
     },
+    userId: {
+      value: (x?, y?) => y ?? x ?? '',
+      default: () => '',
+    },
     Chunks: {
       value: (x?: Document[], y?: Document[]) => y ?? x ?? [],
       default: () => [],
