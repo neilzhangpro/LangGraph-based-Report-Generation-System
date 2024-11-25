@@ -8,7 +8,7 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { ConfigService } from '@nestjs/config';
 import { googleLLMService } from '../components/google';
 import { VectorService } from '../../vector/vector.service';
-import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs/promises';
 
 //load conversation files
 // load and split the files
@@ -39,9 +39,11 @@ export class LoadfilesService {
   }
 
   loadfiles = async (state: AgentStateChannels) => {
-    const { DocsPath,userId } = state;
+    const { UploadFile,userId,TemplatePath } = state;
+    console.log('--------------------userId-------------------------------------');
+    console.log(userId);
     let error;
-    const loader = this.filetypeCheck(DocsPath);
+    const loader = this.filetypeCheck(UploadFile);
     if (typeof loader === 'string') {
       throw new Error(loader);
     }
@@ -62,7 +64,7 @@ export class LoadfilesService {
             metadata: {
               ...textChunk.metadata,
               summary: summaryText,
-              userId: `${userId}-${uuidv4()}`,
+              source: userId,
             },
             };
         } catch (err) {
@@ -73,6 +75,16 @@ export class LoadfilesService {
     );
     //写入到向量数据库供以后搜索
     await this.vectorService.storeInChromaDBDirectly(processedTexts);
+    //加载模板数据
+    if(TemplatePath){
+      let templateData = await fs.readFile(TemplatePath, 'utf-8');
+      try {
+        state.TemplatePath =templateData;
+        } catch (err) {
+        console.error('Error parsing template data:', err);
+        throw new Error('Invalid format in template data');
+        }
+      }
     return {
       ...state,
       Status: 'chunked',

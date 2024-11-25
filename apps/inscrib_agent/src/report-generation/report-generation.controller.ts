@@ -7,15 +7,18 @@ import {
   UploadedFile,
   UseInterceptors,
   BadRequestException,
+  UseGuards,
+Request,
 } from '@nestjs/common';
 import { ReportGenerationService } from './report-generation.service';
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiBody } from '@nestjs/swagger';
 import * as multer from 'multer';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 
 @Controller('report-generation')
@@ -24,20 +27,29 @@ export class ReportGenerationController {
     private readonly reportGenerationService: ReportGenerationService,
   ) {}
 
-  @Get('/test')
-  @ApiQuery({ name: 'userId', required: true, type: String })
-  @ApiQuery({ name: 'DocsPath', required: true, type: String })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token') // 添加这个装饰器
+  @Get('/generate')
+  @ApiQuery({ name: 'UploadFile', required: true, type: String })
   @ApiQuery({ name: 'TemplatePath', required: false, type: String })
-  async getHello(@Query() query: { DocsPath: string; TemplatePath: string, userId: string }): Promise<any> {
+  async getHello(
+    @Query() query: { UploadFile: string; TemplatePath: string },
+    @Request() req // 添加这个参数
+  ): Promise<any> {
     try {
-      return this.reportGenerationService.getHello(query);
+      console.log('Full request headers:', req.headers); // 检查完整的请求头
+      console.log('Authorization header:', req.headers.authorization); // 检查授权头
+      console.log('Controller req.user:', req.user); // 检查用户信息
+      return this.reportGenerationService.getHello(query, req.user);
     } catch (e) {
       console.log(e);
-      await this.cleanupTemporaryFile(query.DocsPath);
+      await this.cleanupTemporaryFile(query.UploadFile);
     }
   }
 
-  @Post('/upload/:userId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token') // 添加这个装饰器
+  @Post('/upload')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'File upload',
@@ -90,12 +102,10 @@ export class ReportGenerationController {
   )
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
-    @Param('userId') userId: string,
-  ): Promise<{ DocsPath: string; userId: string }> {
-    const DocsPath = await this.saveTemporaryFile(file);
+  ): Promise<{ UploadFile: string;}> {
+    const UploadFile = await this.saveTemporaryFile(file);
     return {
-      DocsPath,
-      userId,
+      UploadFile
     };
   }
 

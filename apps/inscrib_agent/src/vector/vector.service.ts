@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
 import type { Document } from "@langchain/core/documents";
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class VectorService {
@@ -46,9 +47,9 @@ export class VectorService {
         }
     }
     
-    async searchInChromaDB(userId: string, question: string): Promise<Document[]> {
+    async searchInChromaDB(source: string, question: string): Promise<Document[]> {
         try {
-            const filter = { userId: userId };
+            const filter = { source: source };
             const retriever = this.chromaClient.asRetriever({
                 filter: filter,
                 k: 2,
@@ -65,7 +66,7 @@ export class VectorService {
     async storeInChromaDBDirectly(documents: Document[]): Promise<void> {
         try {
             await this.chromaClient.addDocuments(documents, {
-                ids: documents.map(doc => doc.metadata.userId)
+                ids: documents.map(doc => doc.metadata.source+"-"+uuidv4())
             });
             console.log("Documents successfully added to Chroma");
         } catch (error) {
@@ -73,11 +74,11 @@ export class VectorService {
             throw new Error(`Error storing documents in Chroma: ${error.message}`);
         }
     }
-    async storeInChromaDB(userId: string, file: Express.Multer.File, text: string): Promise<void> {
+    async storeInChromaDB(file: Express.Multer.File, text: string,auth:any): Promise<void> {
             try {
                 const document1: Document = {
                     pageContent: text,
-                    metadata: { filename: file.originalname, userId: userId },
+                    metadata: { filename: file.originalname, source: auth.id },
                   };
                 await this.chromaClient.addDocuments([document1],{
                     ids: [file.filename]

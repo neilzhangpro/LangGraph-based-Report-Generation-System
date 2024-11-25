@@ -7,7 +7,7 @@ import { AgentStateChannels } from '../components/shared-interfaces';
 export class AgentStatesService {
   // This defines the object that is passed between each node
   agentStateChannels: StateGraphArgs<AgentStateChannels>['channels'] = {
-    DocsPath: {
+    UploadFile: {
       value: (x?, y?) => y ?? x ?? '',
       default: () => '',
     },

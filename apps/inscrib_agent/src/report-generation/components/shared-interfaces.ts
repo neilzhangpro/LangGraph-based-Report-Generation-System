@@ -1,5 +1,5 @@
 export interface AgentStateChannels {
-  DocsPath: string;
+  UploadFile: string;
   TemplatePath: string;
   Status:
     | 'initial'
@@ -10,9 +10,9 @@ export interface AgentStateChannels {
     | 'error';
   Chunks?: Document[];
   Error?: string;
+  userId?: string;
   next: string;
   Report?: object;
-  userId: string;
   Feedback?: string;
   MetaData: {
     startTime: number;

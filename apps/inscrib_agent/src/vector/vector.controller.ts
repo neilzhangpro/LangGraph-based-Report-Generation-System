@@ -1,18 +1,22 @@
-import { Controller, Post, UploadedFile, UseInterceptors, Param, BadRequestException, Get, Body } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseInterceptors, Param, BadRequestException, Get, Body, UseGuards, Request } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import * as multer from 'multer';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { ApiTags, ApiConsumes, ApiBody, ApiParam, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiBody, ApiParam, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { VectorService } from './vector.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 
 @ApiTags('vector')
 @Controller('vector')
 export class VectorController {
     constructor(private readonly vectorService: VectorService) {}
-    @Post('upload/:userId')
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('access-token') // 添加这个装饰器
+    @Post('upload')
     @UseInterceptors(FileInterceptor('file', {
         storage: multer.diskStorage({
             destination: '/usr/src/app/uploads',
@@ -30,7 +34,6 @@ export class VectorController {
         },
     }))
     @ApiConsumes('multipart/form-data')
-    @ApiParam({ name: 'userId', required: true, description: 'User ID' })
     @ApiBody({
         schema: {
             type: 'object',
@@ -46,18 +49,15 @@ export class VectorController {
     @ApiResponse({ status: 400, description: 'Bad request' })
     async uploadAndProcessDocument(
         @UploadedFile() file: Express.Multer.File,
-        @Param('userId') userId: string,
+        @Request() req: any, // 添加这个参数
     ) {
         if (!file) {
             throw new BadRequestException('No file uploaded');
         }
-        if (!userId) {
-            throw new BadRequestException('No user ID provided');
-        }
 
         try {
             const text = await fs.readFile(file.path, 'utf-8');
-            await this.vectorService.storeInChromaDB(userId, file, text);
+            await this.vectorService.storeInChromaDB(file, text, req.user.id);
             return { message: 'File processed and stored successfully' };
         } catch (error) {
             console.error('Error processing file:', error);
@@ -70,27 +70,27 @@ export class VectorController {
         schema: {
             type: 'object',
             properties: {
-                userId: { type: 'string' },
+                id: { type: 'string' },
                 question: { type: 'string' },
             },
-            required: ['userId', 'question'],
+            required: ['id', 'question'],
         },
     })
     @ApiOperation({ summary: 'Search for similar documents' })
     async searchForSimilarDocuments(
-        @Body() body: { userId: string, question: string }
+        @Body() body: { id: string, question: string }
     ) {
-        const { userId, question } = body;
+        const { id, question } = body;
 
-        if (!userId) {
-            throw new BadRequestException('No user ID provided');
+        if (!id) {
+            throw new BadRequestException('No ID provided');
         }
         if (!question) {
             throw new BadRequestException('No question provided');
         }
 
         try {
-            const results = await this.vectorService.searchInChromaDB(userId, question);
+            const results = await this.vectorService.searchInChromaDB(id, question);
             return { results };
         } catch (error) {
             console.error('Error searching for similar documents:', error);

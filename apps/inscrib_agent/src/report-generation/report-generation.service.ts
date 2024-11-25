@@ -4,7 +4,6 @@ import { LoadfilesService } from './components/loadfiles';
 import { AgentStateChannels } from './components/shared-interfaces';
 import { AgentStatesService } from './components/AgentStates';
 import { WriterAgentService } from './components/writerAgent';
-import { CheckerAgentService } from './components/checkerAgent';
 
 @Injectable()
 export class ReportGenerationService {
@@ -12,7 +11,6 @@ export class ReportGenerationService {
     private AgentStatesService: AgentStatesService,
     private loadfilesService: LoadfilesService,
     private WriterAgentService: WriterAgentService,
-    private CheckerAgentService: CheckerAgentService,
   ) {}
 
   //构建graph
@@ -22,18 +20,18 @@ export class ReportGenerationService {
     })
       .addNode('loadfiles', this.loadfilesService.loadfiles)
       .addNode('writer', this.WriterAgentService.run)
-      .addNode('checker', this.CheckerAgentService.run)
       .addEdge(START, 'loadfiles')
       .addEdge('loadfiles', 'writer')
-      .addEdge('writer', 'checker')
-      .addEdge('checker', END);
+      .addEdge('writer', END);
 
     const graph = workflow.compile();
     return graph;
   }
 
-  async getHello(param: object) {
+  async getHello(param: object, auth: any) {
     const graph = await this.buildGraph();
+    param['userId'] = auth.id;
+    console.log('param', param);
     const res = await graph.invoke(param);
     return res;
   }

@@ -17,6 +17,17 @@ async function bootstrap() {
     .setDescription('The inscrib agent API description')
     .setVersion('1.0')
     .addTag('inscrib agent')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Please enter JWT token',
+        in: 'header',
+      },
+      'access-token', // 这个名称要和装饰器中的一致
+    )
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
