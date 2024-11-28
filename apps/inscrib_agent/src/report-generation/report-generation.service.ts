@@ -19,15 +19,17 @@ export class ReportGenerationService {
       channels: this.AgentStatesService.agentStateChannels,
     })
       .addNode('loadfiles', this.loadfilesService.loadfiles)
-      .addNode('writer', this.WriterAgentService.run)
+      .addNode('writer', this.WriterAgentService.callWriteAgent)
+      .addNode('toolcall', await this.WriterAgentService.ToolNode)
       .addEdge(START, 'loadfiles')
       .addEdge('loadfiles', 'writer')
-      .addEdge('writer', END);
-
+      .addConditionalEdges('writer', this.WriterAgentService.shouldContinue)
+      .addEdge('toolcall', 'writer'); // 添加工具调用后返回到 writer 的边
+  
     const graph = workflow.compile();
     return graph;
   }
-
+  
   async getHello(param: object, auth: any) {
     const graph = await this.buildGraph();
     param['userId'] = auth.id;

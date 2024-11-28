@@ -8,7 +8,11 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { createToolCallingAgent } from 'langchain/agents';
 import { AgentExecutor } from 'langchain/agents';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
-import { RunnableLambda } from '@langchain/core/runnables';
+import { RunnableLambda, RunnableSequence } from '@langchain/core/runnables';
+import { createReactAgent, ToolNode } from "@langchain/langgraph/prebuilt";
+import { Annotation, END } from '@langchain/langgraph';
+import { AIMessage, BaseMessage, SystemMessage } from '@langchain/core/messages';
+
 
 
 @Injectable()
@@ -159,11 +163,10 @@ export class WriterAgentService {
     return Response; 
   }
 
-  createAgent = async (state: any) => {
-    const { Status,TemplatePath } = state;
-    //tools
+  getAllTools = async () => {
     const searchTool = tool(
       async (query) => {
+        console.log('-------------------searchTool----------------------')
         const searchOnline = new TavilySearchResults({
           apiKey: this.configService.get<string>('TAVILY_KEY'),
         });
@@ -178,49 +181,55 @@ export class WriterAgentService {
         }),
       },
     );
-    const tools = [searchTool];
-    let promptIn =
-      'Your role: Psychological Clinic Doctor.Your behavior:1.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.2.During the writing process, you can use related tools to conduct searches or conceptual queries.3.Wrap the output in json {format_instructions}.4.Please provide your response as a clean JSON object without markdown formatting. The conversation records are as follows:{docs}';
-    //创建写作agent
-    const prompt = ChatPromptTemplate.fromMessages([
-      ['system', promptIn],
-      ['placeholder', '{agent_scratchpad}'],
-    ]);
-    const zodSchema = TemplatePath ? this.responStructure(TemplatePath) : this.responStructure();
-    const parser = StructuredOutputParser.fromZodSchema(zodSchema);
-    const partialedPrompt = await prompt.partial({
-      format_instructions: parser.getFormatInstructions(),
-    });
-    const agent = await createToolCallingAgent({
-      llm: this.googleLLMService.llm,
-      tools,
-      prompt: partialedPrompt,
-    });
-    const agentExecutor = new AgentExecutor({
-      agent,
-      tools,
-    });
-    return agentExecutor;
+    const tools = [searchTool]
+    return tools;
   };
 
-  run = async (state: any) => {
-    const { Chunks, Status, Feedback,TemplatePath } = state;
-    const agentExecutor = await this.createAgent(state);
-    const zodSchema = this.responStructure(TemplatePath);
-    const parser = StructuredOutputParser.fromZodSchema(zodSchema);
-    //定义一个chain来格式化输出
-    const chain = RunnableLambda.from(async (input) => {
-      const data = await agentExecutor.invoke(input);
-      return data.output;
-    }).pipe(parser);
+  ToolNode = async (state:any) => {
+    const toolNode = new ToolNode(await this.getAllTools());
+    return toolNode;
+  };
 
-    const reportsData = await chain.invoke({ docs: Chunks });
-    console.log('-----------------------First Written--------------------------')
-    console.log(reportsData);
+  callWriteAgent = async (state: any) => {
+    const { TemplatePath,messages,Chunks } = state;
+    const zodSchema = TemplatePath ? this.responStructure(TemplatePath) : this.responStructure();
+    const parser = StructuredOutputParser.fromZodSchema(zodSchema);
+    const format_instructions =parser.getFormatInstructions();
+    /*
+    const LLM = this.googleLLMService.llm.bindTools(await this.getAllTools());
+    const chain = RunnableSequence.from([
+      ChatPromptTemplate.fromTemplate(
+        `Your are a Psychological Clinic Doctor.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.During the writing process,You must pose your question to the original conversation transcript and search through the tool until no new questions are generated. Wrap the output in json format: {format_instructions}. The raw conversation transcript are as follows:{Chunks}.what is the weather in SF california?`
+      ),
+      LLM,
+      parser,
+    ]);
+    const response = await chain.invoke({
+      format_instructions: format_instructions,
+      Chunks: Chunks,
+    });
+    state.messages.push(response);
+    */
+   const tttts = await this.getAllTools();
+   const agent = createReactAgent({
+    llm: this.googleLLMService.llm,
+    tools: tttts,
+    interruptBefore:["tools"],
+    messageModifier: new SystemMessage( `Your are a Psychological Clinic Doctor.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.During the writing process,You must pose your question to the original conversation transcript and search through the tool until no new questions are generated. Wrap the output in json format: {format_instructions}. The raw conversation transcript are as follows:{Chunks}.what is the weather in SF california?`)
+   });
+   const agentExecutor = new AgentExecutor({
+    agent: agent,
+    tools: tttts,
+    verbose: true,
+   });
+    const response = await agentExecutor.invoke({
+      format_instructions: format_instructions,
+      Chunks: Chunks,
+    });
     return {
       ...state,
       Status: 'written',
-      Report: reportsData,
+      Report: response,
       MetaData: {
         ...state.MetaData,
         processingSteps: [
@@ -229,5 +238,15 @@ export class WriterAgentService {
         ],
       },
     };
-  };
+  }
+
+  shouldContinue = (state: any) => {
+    const { messages } = state;
+    let msg = messages[messages?.length - 1];
+    if (msg?.tool_calls?.length > 0) {
+      return END;
+    }
+    return "toolcall"
+};
+
 }

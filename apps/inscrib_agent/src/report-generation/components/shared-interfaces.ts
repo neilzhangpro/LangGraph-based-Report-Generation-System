@@ -1,6 +1,9 @@
+import { BaseMessage } from "@langchain/core/messages";
+
 export interface AgentStateChannels {
   UploadFile: string;
   TemplatePath: string;
+  messages: any;
   Status:
     | 'initial'
     | 'chunked'

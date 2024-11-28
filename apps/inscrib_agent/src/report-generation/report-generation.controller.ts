@@ -21,11 +21,75 @@ import * as multer from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 
+import { googleLLMService } from './components/google';
+import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
+import { ConfigService } from '@nestjs/config';
+import { tool } from '@langchain/core/tools';
+import { z } from 'zod';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { createToolCallingAgent,AgentExecutor } from 'langchain/agents';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { query } from 'express';
+
+
 @Controller('report-generation')
 export class ReportGenerationController {
   constructor(
     private readonly reportGenerationService: ReportGenerationService,
+    private readonly configService: ConfigService,
+    private readonly googleLLMService: googleLLMService,
   ) {}
+
+  //test method
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token') // 添加这个装饰器
+  @Get('/testAgents')
+  async testAgents(@Request() req ){
+    const searchTool = tool(
+      async (query) => {
+        console.log('-------------------searchTool----------------------')
+        const searchOnline = new TavilySearchResults({
+          apiKey: this.configService.get<string>('TAVILY_KEY'),
+        });
+        // This is a placeholder, but don't tell the LLM that...
+        return await searchOnline.invoke({ query: query });
+      },
+      {
+        name: 'search',
+        description: 'Call to surf the web.',
+        schema: z.object({
+          query: z.string().describe('The query to use in your search.'),
+        }),
+      },
+    );
+    const tools = [searchTool]
+    const agent = await createReactAgent({
+      llm: this.googleLLMService.llm,
+      tools: tools,
+      messageModifier: new SystemMessage( `You are a helpful assistant.You can use tools to help me.The Tools:{tools}
+        To use a tool, please use the following format:
+        Thought: Do I need to use a tool? Yes
+        Action: the action to take, should be one of [{tool_names}]
+        Action Input: the input to the action
+        Observation: the result of the action
+        When you have a response to say to the Human, or if you do not need to use a tool, you MUST use the format:
+        Thought: Do I need to use a tool? No
+        Final Answer: [your response here]
+        New input: {input}
+        {agent_scratchpad}
+        `),
+     });
+     const agentExecutor = new AgentExecutor({
+      agent: agent,
+      tools: tools,
+     });
+      const result = await agentExecutor.invoke({
+        input: 'tell me the real-time btc price',
+      });
+      console.log(result)
+      return result;
+  }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token') // 添加这个装饰器

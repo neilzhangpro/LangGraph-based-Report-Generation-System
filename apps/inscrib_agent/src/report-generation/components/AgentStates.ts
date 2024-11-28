@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Annotation, StateGraphArgs } from '@langchain/langgraph';
 import { AgentStateChannels } from '../components/shared-interfaces';
+import { BaseMessage } from '@langchain/core/messages';
 
 
 @Injectable()
@@ -14,6 +15,10 @@ export class AgentStatesService {
     TemplatePath: {
       value: (x?, y?) => y ?? x ?? '',
       default: () => '',
+    },
+    messages: {
+      value: (x?: BaseMessage[], y?: BaseMessage[]) => (x ?? []).concat(y ?? []),
+      default: () => [],
     },
     Status: {
       value: (x?, y?) => y ?? x ?? 'initial',
