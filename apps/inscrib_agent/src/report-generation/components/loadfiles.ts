@@ -5,7 +5,6 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { JSONLoader } from 'langchain/document_loaders/fs/json';
 import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { ConfigService } from '@nestjs/config';
 import { googleLLMService } from '../components/google';
 import { VectorService } from '../../vector/vector.service';
 import * as fs from 'fs/promises';
@@ -20,7 +19,6 @@ export class LoadfilesService {
   constructor(
     private readonly googleLLMService: googleLLMService,
     private readonly vectorService: VectorService,
-    private readonly configService: ConfigService,
   ) {}
 
   //filetype check
@@ -93,7 +91,6 @@ export class LoadfilesService {
       Error: error,
       MetaData: {
         ...state.MetaData,
-        processingSteps: [...state.MetaData.processingSteps, 'document_loaded'],
       },
     };
   };

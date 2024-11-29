@@ -4,23 +4,16 @@ export interface AgentStateChannels {
   UploadFile: string;
   TemplatePath: string;
   messages: any;
-  Status:
-    | 'initial'
-    | 'chunked'
-    | 'written'
-    | 'reviewed'
-    | 'completed'
-    | 'error';
+  Status: string;
   Chunks?: Document[];
   Error?: string;
   userId?: string;
-  next: string;
   Report?: object;
-  Feedback?: string;
+  Analysis?: string;
+  Research?: string;
   MetaData: {
     startTime: number;
     lastUpdated: number;
-    processingSteps: string[];
   };
 }
 

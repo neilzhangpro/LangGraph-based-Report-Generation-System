@@ -6,15 +6,16 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 @Injectable()
 export class googleLLMService {
-  public llm: ChatOpenAI;
+  public llm: ChatGoogleGenerativeAI;
+  public llmOpenAI: ChatOpenAI;
   constructor(private readonly configService: ConfigService) {
-    /*this.llm = new ChatGoogleGenerativeAI({
+    this.llm = new ChatGoogleGenerativeAI({
       model: 'gemini-1.5-flash',
       temperature: 0,
       apiKey: this.configService.get<string>('ALL_IN_ONE_KEY'),
       baseUrl: `${this.configService.get<string>('PROXY_URL')}/google`,
-    });*/
-    this.llm = new ChatOpenAI({
+    });
+    this.llmOpenAI = new ChatOpenAI({
       model: 'gpt-4o',
       temperature: 0,
       apiKey: this.configService.get<string>('ALL_IN_ONE_KEY'),

@@ -24,6 +24,14 @@ export class AgentStatesService {
       value: (x?, y?) => y ?? x ?? 'initial',
       default: () => 'initial',
     },
+    Analysis: {
+      value: (x?, y?) => y ?? x ?? '',
+      default: () => '',
+    },
+    Research: {
+      value: (x?, y?) => y ?? x ?? '',
+      default: () => '',
+    },
     userId: {
       value: (x?, y?) => y ?? x ?? '',
       default: () => '',
@@ -36,10 +44,6 @@ export class AgentStatesService {
       value: (x?, y?) => y ?? x ?? {},
       // eslint-disable-next-line prettier/prettier
       default: () => ({}),
-    },
-    next: {
-      value: (x?, y?) => y ?? x ?? 'start',
-      default: () => 'start',
     },
     MetaData: {
       value: (x?, y?) => ({

@@ -2,16 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { googleLLMService } from '../components/google';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { ConfigService } from '@nestjs/config';
-import { tool } from '@langchain/core/tools';
+import { StructuredTool, tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { createToolCallingAgent } from 'langchain/agents';
 import { AgentExecutor } from 'langchain/agents';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
-import { RunnableLambda, RunnableSequence } from '@langchain/core/runnables';
+import { Runnable, RunnableConfig, RunnableLambda, RunnableSequence } from '@langchain/core/runnables';
 import { createReactAgent, ToolNode } from "@langchain/langgraph/prebuilt";
 import { Annotation, END } from '@langchain/langgraph';
-import { AIMessage, BaseMessage, SystemMessage } from '@langchain/core/messages';
+import { AIMessage, BaseMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { ChatOpenAI } from '@langchain/openai';
+import { convertToOpenAITool } from '@langchain/core/utils/function_calling';
+import { AgentStateChannels } from './shared-interfaces';
 
 
 
@@ -163,6 +166,7 @@ export class WriterAgentService {
     return Response; 
   }
 
+  //定义工具
   getAllTools = async () => {
     const searchTool = tool(
       async (query) => {
@@ -185,68 +189,119 @@ export class WriterAgentService {
     return tools;
   };
 
-  ToolNode = async (state:any) => {
-    const toolNode = new ToolNode(await this.getAllTools());
-    return toolNode;
-  };
-
-  callWriteAgent = async (state: any) => {
-    const { TemplatePath,messages,Chunks } = state;
-    const zodSchema = TemplatePath ? this.responStructure(TemplatePath) : this.responStructure();
-    const parser = StructuredOutputParser.fromZodSchema(zodSchema);
-    const format_instructions =parser.getFormatInstructions();
-    /*
-    const LLM = this.googleLLMService.llm.bindTools(await this.getAllTools());
-    const chain = RunnableSequence.from([
-      ChatPromptTemplate.fromTemplate(
-        `Your are a Psychological Clinic Doctor.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.During the writing process,You must pose your question to the original conversation transcript and search through the tool until no new questions are generated. Wrap the output in json format: {format_instructions}. The raw conversation transcript are as follows:{Chunks}.what is the weather in SF california?`
+  //初始分析结构
+  initialAnalysis = async (state: AgentStateChannels) => {
+    const { Chunks, messages = [] } = state;
+    const prompt = ChatPromptTemplate.fromMessages([
+      new SystemMessage(
+        "You are a professional report analyst. Analyze the transcript and identify key points and themes."
       ),
-      LLM,
-      parser,
+      new HumanMessage(`Please analyze this transcript and identify the main points: ${JSON.stringify(Chunks)}`)
     ]);
-    const response = await chain.invoke({
-      format_instructions: format_instructions,
-      Chunks: Chunks,
-    });
-    state.messages.push(response);
-    */
-   const tttts = await this.getAllTools();
-   const agent = createReactAgent({
-    llm: this.googleLLMService.llm,
-    tools: tttts,
-    interruptBefore:["tools"],
-    messageModifier: new SystemMessage( `Your are a Psychological Clinic Doctor.You have just finished the psychological consultation with a client. Now you need to write down the conversation record with the client into a professional psychological consultation report and finally send it to the client.During the writing process,You must pose your question to the original conversation transcript and search through the tool until no new questions are generated. Wrap the output in json format: {format_instructions}. The raw conversation transcript are as follows:{Chunks}.what is the weather in SF california?`)
-   });
-   const agentExecutor = new AgentExecutor({
-    agent: agent,
-    tools: tttts,
-    verbose: true,
-   });
-    const response = await agentExecutor.invoke({
-      format_instructions: format_instructions,
-      Chunks: Chunks,
-    });
+    const response = await prompt.pipe(this.googleLLMService.llm).invoke(messages);
+    console.log('-------------------initialAnalysis----------------------')
+    console.log(response)
     return {
       ...state,
-      Status: 'written',
-      Report: response,
-      MetaData: {
-        ...state.MetaData,
-        processingSteps: [
-          ...state.MetaData.processingSteps,
-          'document_written',
-        ],
-      },
-    };
-  }
-
-  shouldContinue = (state: any) => {
-    const { messages } = state;
-    let msg = messages[messages?.length - 1];
-    if (msg?.tool_calls?.length > 0) {
-      return END;
+      messages: [...messages, response],
+      Analysis: response.content,
+      Status: 'initial_analysis_complete'
     }
-    return "toolcall"
-};
+  };
+
+  //网络研究节点
+  conductResearch = async (state: AgentStateChannels) => {
+    const { Analysis, messages = [],Status } = state;
+    console.log('-------------------LLMwithtool----------------------')
+    console.log(Analysis)
+    // 从分析中提取关键词进行搜索
+    const searchPrompt = ChatPromptTemplate.fromMessages([
+      new SystemMessage("Generate at most 5 relevant search question based on the analysis,and split the question with |."),
+      new HumanMessage(Analysis)
+    ]);
+    const keywords = await searchPrompt.pipe(this.googleLLMService.llm).invoke(messages);
+    console.log('-------------------conductResearch----------------------')
+    console.log(keywords.content)
+    const searchOnline = new TavilySearchResults({
+      apiKey: this.configService.get<string>('TAVILY_KEY'),
+      verbose: true,
+    });
+    // 添加请求验证
+    if (!keywords.content || typeof keywords.content !== 'string') {
+      throw new Error('Invalid search query generated');
+    }
+    const keywordsArr = keywords.content.split('|').filter(Boolean);
+    const searchResultsArr = await Promise.all(
+      keywordsArr.map(async (item) => {
+      const searchResults = await searchOnline.invoke({ input: item });
+      return searchResults;
+      })
+    );
+    
+    console.log('-------------------searchResults----------------------')
+    console.log(searchResultsArr)
+    return {
+      ...state,
+      messages: [...messages, new AIMessage({ content: JSON.stringify(searchResultsArr) })],
+      Research: searchResultsArr,
+      Status: 'research_complete'
+    };
+  };
+
+
+
+// 报告撰写节点
+private async writeReport(state: any) {
+  const { analysis, research, transcript, messages = [] } = state;
+
+  const prompt = ChatPromptTemplate.fromMessages([
+    new SystemMessage(
+      "You are a professional report writer. Create a comprehensive report using the analysis and research provided."
+    ),
+    new MessagesPlaceholder("history"),
+    new HumanMessage(
+      `Write a professional report based on:\nTranscript: ${transcript}\nAnalysis: ${analysis}\nResearch: ${JSON.stringify(research)}`
+    )
+  ]);
+
+  const response = await this.googleLLMService.llm.invoke([
+    ...messages,
+    new HumanMessage("Please write the report in a professional format.")
+  ]);
+
+  return {
+    ...state,
+    messages: [...messages, response],
+    report: response.content,
+    status: 'report_written'
+  };
+}
+
+// 报告优化节点
+private async improveReport(state: any) {
+  const { report, messages = [] } = state;
+
+  const prompt = ChatPromptTemplate.fromMessages([
+    new SystemMessage(
+      "You are a professional editor. Review and improve the report for clarity, professionalism, and accuracy."
+    ),
+    new MessagesPlaceholder("history"),
+    new HumanMessage(`Please improve this report: ${report}`)
+  ]);
+
+  const response = await this.googleLLMService.llm.invoke([
+    ...messages,
+    new HumanMessage("Please review and improve the report.")
+  ]);
+  return {
+    ...state,
+    messages: [...messages, response],
+    final_report: response.content,
+    status: 'complete'
+  };
+}
+
+
+
 
 }
