@@ -107,7 +107,7 @@ export class ReportGenerationController {
       return this.reportGenerationService.getHello(query, req.user);
     } catch (e) {
       console.log(e);
-      await this.cleanupTemporaryFile(query.UploadFile);
+      //await this.cleanupTemporaryFile(query.UploadFile);
     }
   }
 

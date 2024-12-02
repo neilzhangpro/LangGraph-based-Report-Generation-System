@@ -21,10 +21,12 @@ export class ReportGenerationService {
       .addNode('loadfiles', this.loadfilesService.loadfiles)
       .addNode('analysis', this.WriterAgentService.initialAnalysis)
       .addNode('search', this.WriterAgentService.conductResearch)
+      .addNode('writeReport', this.WriterAgentService.writeReport)
       .addEdge(START, 'loadfiles')
       .addEdge('loadfiles', 'analysis')
       .addEdge('analysis', 'search')
-      .addEdge('search', END);
+      .addEdge('search', 'writeReport')
+      .addEdge('writeReport', END);
   
     const graph = workflow.compile();
     return graph;

@@ -11,6 +11,31 @@ async function bootstrap() {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }*/
+  //开启CORS
+  app.enableCors({
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'http://localhost:3001',
+        'http://localhost:3002',
+        'http://localhost:3000',
+        'https://staging.your-domain.com'
+      ];
+      
+      // 允许没有 origin 的请求（比如移动应用或 Postman）
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
   //swagger
   const config = new DocumentBuilder()
     .setTitle('Inscrib Agent')

@@ -8,10 +8,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
-    PassportModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }), // 添加这行
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'ironmindllm',
-      signOptions: { expiresIn: '30m' },
+      signOptions: { expiresIn: '1y' },
     }),
   ],
   providers: [AuthService, JwtStrategy],

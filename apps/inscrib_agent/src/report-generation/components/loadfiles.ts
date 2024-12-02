@@ -74,15 +74,37 @@ export class LoadfilesService {
     //写入到向量数据库供以后搜索
     await this.vectorService.storeInChromaDBDirectly(processedTexts);
     //加载模板数据
-    if(TemplatePath){
-      let templateData = await fs.readFile(TemplatePath, 'utf-8');
+    if (TemplatePath) {
+      let templateData;
+      if (TemplatePath.startsWith('http://') || TemplatePath.startsWith('https://')) {
+      // Fetch remote template file
       try {
-        state.TemplatePath =templateData;
-        } catch (err) {
-        console.error('Error parsing template data:', err);
-        throw new Error('Invalid format in template data');
+        const response = await fetch(TemplatePath);
+        if (!response.ok) {
+        throw new Error(`Failed to fetch template from ${TemplatePath}: ${response.statusText}`);
         }
+        templateData = await response.text();
+      } catch (err) {
+        console.error('Error fetching remote template data:', err);
+        throw new Error('Failed to fetch remote template data');
       }
+      } else {
+      // Read local template file
+      try {
+        templateData = await fs.readFile(TemplatePath, 'utf-8');
+      } catch (err) {
+        console.error('Error reading local template data:', err);
+        throw new Error('Failed to read local template data');
+      }
+      }
+
+      try {
+      state.TemplatePath = templateData;
+      } catch (err) {
+      console.error('Error parsing template data:', err);
+      throw new Error('Invalid format in template data');
+      }
+    }
     return {
       ...state,
       Status: 'chunked',

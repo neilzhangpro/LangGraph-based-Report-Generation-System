@@ -15,7 +15,7 @@ import { AIMessage, BaseMessage, HumanMessage, SystemMessage } from '@langchain/
 import { ChatOpenAI } from '@langchain/openai';
 import { convertToOpenAITool } from '@langchain/core/utils/function_calling';
 import { AgentStateChannels } from './shared-interfaces';
-
+import { jsonSchemaToZod } from "json-schema-to-zod";
 
 
 @Injectable()
@@ -153,15 +153,21 @@ export class WriterAgentService {
     });
     if(TemplatePath){
       console.log('-------------------TemplatePath----------------------')
+      let jsons = jsonSchemaToZod(JSON.parse(TemplatePath));
+      console.log(jsons)
       //激活zodschema
       const functionBody = `
         const { z } = arguments[0];
-        return ${TemplatePath};
+        return ${jsons};
       `;
-      const schemaFunction = new Function(functionBody);
-      const schema = schemaFunction({ z });
-      Response = schema;
-      console.log(Response)
+      try {
+        const schemaFunction = new Function(functionBody);
+        const schema = schemaFunction({ z });
+        Response = schema;
+        console.log(Response)
+      }catch (error) {
+        console.log(error)
+      }
     }
     return Response; 
   }
@@ -192,17 +198,24 @@ export class WriterAgentService {
   //初始分析结构
   initialAnalysis = async (state: AgentStateChannels) => {
     const { Chunks, messages = [] } = state;
+    let Error = '';
+    let response = new AIMessage({ content: '' });
     const prompt = ChatPromptTemplate.fromMessages([
       new SystemMessage(
         "You are a professional report analyst. Analyze the transcript and identify key points and themes."
       ),
       new HumanMessage(`Please analyze this transcript and identify the main points: ${JSON.stringify(Chunks)}`)
     ]);
-    const response = await prompt.pipe(this.googleLLMService.llm).invoke(messages);
-    console.log('-------------------initialAnalysis----------------------')
-    console.log(response)
+    try{
+      response = await prompt.pipe(this.googleLLMService.llm).invoke(messages);
+      console.log('-------------------initialAnalysis----------------------')
+      console.log(response)
+    }catch (error) {
+      Error = error;
+    }
     return {
       ...state,
+      Error,
       messages: [...messages, response],
       Analysis: response.content,
       Status: 'initial_analysis_complete'
@@ -212,11 +225,14 @@ export class WriterAgentService {
   //网络研究节点
   conductResearch = async (state: AgentStateChannels) => {
     const { Analysis, messages = [],Status } = state;
+    let Error = '';
+    let searchResultsArr = [];
     console.log('-------------------LLMwithtool----------------------')
     console.log(Analysis)
+    try{
     // 从分析中提取关键词进行搜索
     const searchPrompt = ChatPromptTemplate.fromMessages([
-      new SystemMessage("Generate at most 5 relevant search question based on the analysis,and split the question with |."),
+      new SystemMessage("Generate at most 3 relevant search question based on the analysis,and split the question with |."),
       new HumanMessage(Analysis)
     ]);
     const keywords = await searchPrompt.pipe(this.googleLLMService.llm).invoke(messages);
@@ -224,14 +240,15 @@ export class WriterAgentService {
     console.log(keywords.content)
     const searchOnline = new TavilySearchResults({
       apiKey: this.configService.get<string>('TAVILY_KEY'),
+      maxResults: 3,
       verbose: true,
     });
     // 添加请求验证
     if (!keywords.content || typeof keywords.content !== 'string') {
-      throw new Error('Invalid search query generated');
+      console.log('Invalid search query generated');
     }
-    const keywordsArr = keywords.content.split('|').filter(Boolean);
-    const searchResultsArr = await Promise.all(
+    const keywordsArr = typeof keywords.content === 'string' ? keywords.content.split('|').filter(Boolean) : [];
+    searchResultsArr = await Promise.all(
       keywordsArr.map(async (item) => {
       const searchResults = await searchOnline.invoke({ input: item });
       return searchResults;
@@ -240,10 +257,14 @@ export class WriterAgentService {
     
     console.log('-------------------searchResults----------------------')
     console.log(searchResultsArr)
+    }catch (error) {
+      Error = error;
+    }
     return {
       ...state,
+      Error,
       messages: [...messages, new AIMessage({ content: JSON.stringify(searchResultsArr) })],
-      Research: searchResultsArr,
+      Research: JSON.stringify(searchResultsArr),
       Status: 'research_complete'
     };
   };
@@ -251,53 +272,69 @@ export class WriterAgentService {
 
 
 // 报告撰写节点
-private async writeReport(state: any) {
-  const { analysis, research, transcript, messages = [] } = state;
+writeReport = async (state: AgentStateChannels) => {
+  const { Analysis, Research, Chunks, messages = [],TemplatePath } = state;
 
-  const prompt = ChatPromptTemplate.fromMessages([
-    new SystemMessage(
-      "You are a professional report writer. Create a comprehensive report using the analysis and research provided."
+  const parser = new StructuredOutputParser(this.responStructure(TemplatePath));
+  const chain = RunnableSequence.from([
+    ChatPromptTemplate.fromTemplate(
+      "You are a professional report writer. Create a comprehensive report using the analysis and research provided.You should output as a structured json like this: {format_instructions}.Write a professional report based on:\nTranscript: {Chunks}\nAnalysis: {Analysis}\nResearch: {Research}",
     ),
-    new MessagesPlaceholder("history"),
-    new HumanMessage(
-      `Write a professional report based on:\nTranscript: ${transcript}\nAnalysis: ${analysis}\nResearch: ${JSON.stringify(research)}`
-    )
+    this.googleLLMService.llm,
+    parser,
   ]);
-
-  const response = await this.googleLLMService.llm.invoke([
-    ...messages,
-    new HumanMessage("Please write the report in a professional format.")
-  ]);
-
+  let response = new AIMessage({ content: '' });
+  let Error = '';
+  try{
+  response = await chain.invoke({
+    Chunks:JSON.stringify(Chunks),
+    Analysis:JSON.stringify(Analysis),
+    Research:JSON.stringify(Research),
+    format_instructions:parser.getFormatInstructions(),
+  });
+  console.log('-------------------writeReport----------------------')
+  console.log(response)
+  }catch (error) {
+    console.log(error)
+    Error = error;
+  }
   return {
     ...state,
+    Error,
     messages: [...messages, response],
-    report: response.content,
-    status: 'report_written'
+    Report: response,
+    Status: 'report_written'
   };
 }
 
 // 报告优化节点
 private async improveReport(state: any) {
-  const { report, messages = [] } = state;
+  const { Report, messages = [],Chunks } = state;
 
   const prompt = ChatPromptTemplate.fromMessages([
     new SystemMessage(
-      "You are a professional editor. Review and improve the report for clarity, professionalism, and accuracy."
+      "You are a professional editor. Review and improve the report for clarity, professionalism, and accuracy.reference the raw transcript: {Chunks}.The report is as follows:{Report}",
     ),
-    new MessagesPlaceholder("history"),
-    new HumanMessage(`Please improve this report: ${report}`)
   ]);
 
-  const response = await this.googleLLMService.llm.invoke([
-    ...messages,
-    new HumanMessage("Please review and improve the report.")
+  
+  const parser = new StructuredOutputParser(this.responStructure());
+  const chain = RunnableSequence.from([
+    ChatPromptTemplate.fromTemplate(
+      "You are a professional editor. Review and improve the report for clarity, professionalism, and accuracy.reference the raw transcript: {Chunks}.The report is as follows:{Report}",
+    ),
+    this.googleLLMService.llmOpenAI,
+    parser,
   ]);
+  const response = await chain.invoke({
+    Chunks:JSON.stringify(Chunks),
+    Report:JSON.stringify(Report),
+  });
   return {
     ...state,
     messages: [...messages, response],
-    final_report: response.content,
-    status: 'complete'
+    Report: response,
+    Status: 'complete'
   };
 }
 
