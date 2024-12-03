@@ -9,20 +9,28 @@ export class googleLLMService {
   public llm: ChatGoogleGenerativeAI;
   public llmOpenAI: ChatOpenAI;
   constructor(private readonly configService: ConfigService) {
-    this.llm = new ChatGoogleGenerativeAI({
+    let proxyaddress = this.configService.get<string>('PROXY_URL');
+    const googleConfig: any = {
       model: 'gemini-1.5-flash',
       temperature: 0,
       apiKey: this.configService.get<string>('ALL_IN_ONE_KEY'),
-      baseUrl: `${this.configService.get<string>('PROXY_URL')}/google`,
-    });
-    this.llmOpenAI = new ChatOpenAI({
+    };
+    if (proxyaddress !== "") {
+      googleConfig.baseUrl = `${this.configService.get<string>('PROXY_URL')}/google`;
+    }
+    this.llm = new ChatGoogleGenerativeAI(googleConfig);
+
+    const openAIConfig: any = {
       model: 'gpt-4o',
       temperature: 0,
       apiKey: this.configService.get<string>('ALL_IN_ONE_KEY'),
-      configuration: {
-        baseURL: `${this.configService.get<string>('PROXY_URL')}/v1`,
-      },
-    });
+    };
+    if (proxyaddress !== "") {
+      openAIConfig.configuration = {
+      baseURL: `${this.configService.get<string>('PROXY_URL')}/v1`,
+      };
+    }
+    this.llmOpenAI = new ChatOpenAI(openAIConfig);
   }
   async summaryText(input: string): Promise<string> {
     try {
