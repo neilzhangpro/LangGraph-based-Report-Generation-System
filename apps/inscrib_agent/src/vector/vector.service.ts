@@ -52,7 +52,6 @@ export class VectorService {
             const filter = { source: source };
             const retriever = this.chromaClient.asRetriever({
                 filter: filter,
-                k: 2,
             });
             const res = await retriever.invoke(question);
             console.log(res);

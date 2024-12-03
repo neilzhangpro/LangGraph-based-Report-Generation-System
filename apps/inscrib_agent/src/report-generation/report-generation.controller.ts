@@ -9,6 +9,7 @@ import {
   BadRequestException,
   UseGuards,
 Request,
+Body,
 } from '@nestjs/common';
 import { ReportGenerationService } from './report-generation.service';
 import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
@@ -110,6 +111,25 @@ export class ReportGenerationController {
       //await this.cleanupTemporaryFile(query.UploadFile);
     }
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Post('/reGernatePart')
+  async reGernatePart(
+    @Body() body: { oldSection: string; prompts: string },
+    @Request() req,
+  ): Promise<any> {
+    try {
+      console.log('Full request headers:', req.headers);
+      console.log('Authorization header:', req.headers.authorization);
+      console.log('Controller req.user:', req.user);
+      return this.reportGenerationService.reGernatePart(body.oldSection, body.prompts, req.user);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  
+
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token') // 添加这个装饰器

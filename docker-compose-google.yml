@@ -16,6 +16,7 @@ services:
       - google.env
     volumes:
       - /usr/src/app/node_modules
+      - /usr/src/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s

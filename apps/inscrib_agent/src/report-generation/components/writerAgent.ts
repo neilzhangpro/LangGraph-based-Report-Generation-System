@@ -16,6 +16,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { convertToOpenAITool } from '@langchain/core/utils/function_calling';
 import { AgentStateChannels } from './shared-interfaces';
 import { jsonSchemaToZod } from "json-schema-to-zod";
+import { VectorService } from '../../vector/vector.service'
 
 
 @Injectable()
@@ -23,6 +24,7 @@ export class WriterAgentService {
   constructor(
     private readonly configService: ConfigService,
     private readonly googleLLMService: googleLLMService,
+    private readonly vectorService: VectorService
   ) {}
 
   responStructure(TemplatePath?: string) {
@@ -305,6 +307,32 @@ writeReport = async (state: AgentStateChannels) => {
     Report: response,
     Status: 'report_written'
   };
+}
+
+//根据指令重新生成部分
+generatePart = async (oldSection:string,prompts:string,uid:string) => {
+ 
+  console.log('-------------------generatePart----------------------')
+  console.log(oldSection)
+  console.log(prompts)
+  console.log(uid)
+  //根据ID超找向量数据中相关文档
+  const vector = await this.vectorService.searchInChromaDB(uid,oldSection);
+  console.log('-------------------vector----------------------')
+  console.log(vector)
+  const prompt = ChatPromptTemplate.fromMessages([
+    new SystemMessage(`You are a professional psychoanalyst, and your duty is to modify and process part of a psychological counseling report according to the modification requirements. You must refer to the original psychological counseling conversation record.Your return result can only have the modified text itself, not any redundant answers, otherwise you will be punished. The following is the original conversation record:${JSON.stringify(vector)}, and the following is what needs to be modified. Reporting section:${oldSection} The following are the modification requirements:`),
+    new HumanMessage(prompts)
+  ]);
+  try{
+    const response = await prompt.pipe(this.googleLLMService.llm).invoke({});
+    console.log('-------------------generatePart----------------------')
+    console.log(response)
+    return response;
+  }catch (error) {
+    console.log(error)
+  }
+  
 }
 
 // 报告优化节点

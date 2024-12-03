@@ -39,4 +39,17 @@ export class ReportGenerationService {
     const res = await graph.invoke(param);
     return res;
   }
+
+  //重新生成部分
+  async reGernatePart(oldSection:string,prompts:string,auth:any){
+    const uid = auth.id;
+    try{
+      const res = await this.WriterAgentService.generatePart(oldSection,prompts,uid);
+      return res;
+    }catch(e){
+      console.log(e);
+    }
+  };
+
+
 }
