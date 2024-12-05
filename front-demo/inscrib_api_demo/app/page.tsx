@@ -35,7 +35,7 @@ export default function Home() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/token?id=tomiezhang`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/token?id=${inputValue}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

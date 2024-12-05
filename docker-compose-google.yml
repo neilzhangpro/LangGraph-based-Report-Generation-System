@@ -34,7 +34,7 @@ services:
       context: ./front-demo/inscrib_api_demo
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=http://localhost:3000  # 浏览器访问用 localhost
+        - NEXT_PUBLIC_API_URL=http://34.31.147.139:3000  # 浏览器访问用 localhost
         - NEXT_SERVER_API_URL=http://app:3000        # 服务器端访问用 container name
     restart: always
     ports:
