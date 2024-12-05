@@ -14,27 +14,37 @@ async function bootstrap() {
   //开启CORS
   app.enableCors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        'http://localhost:3001',
-        'http://localhost:3002',
-        'http://localhost:3000',
-        'https://staging.your-domain.com'
-      ];
-      
-      // 允许没有 origin 的请求（比如移动应用或 Postman）
+      // 允许没有 origin 的请求（比如移动端应用）
       if (!origin) {
         return callback(null, true);
       }
-
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+  
+      try {
+        const url = new URL(origin);
+        
+        // 检查是否允许访问
+        const isAllowed = 
+          // 允许所有 localhost 端口
+          (url.hostname === 'localhost') ||
+          // 允许特定 IP 的所有端口
+          (url.hostname === '34.31.147.139') ||
+          // 允许特定域名（包括子域名）
+          (url.hostname === 'ironmind.ai' || url.hostname.endsWith('.ironmind.ai'));
+  
+        if (isAllowed) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      } catch (err) {
+        callback(new Error('Invalid origin'));
       }
     },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true, // 如果需要支持跨域携带凭证
+    allowedHeaders: 'Content-Type, Accept, Authorization',
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   });
   //swagger
   const config = new DocumentBuilder()
