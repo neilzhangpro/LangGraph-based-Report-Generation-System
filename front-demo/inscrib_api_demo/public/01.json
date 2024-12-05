@@ -1,0 +1,166 @@
+ {
+    "type": "object",
+    "properties": {
+      "Clinician": {
+        "type": "string",
+        "description": "The clinician who wrote the report"
+      },
+      "Client": {
+        "type": "string",
+        "description": "The client who the report is about"
+      },
+      "Date": {
+        "type": "string",
+        "description": "The date the report was written"
+      },
+      "Reason": {
+        "type": "string",
+        "description": "Reasons why customers come for consultation.e.g:David, a 40-year-old male, self-referred for a psychological assessment due to concerns about his mental health. He reported experiencing symptoms of anxiety, including nightmares, difficulty sleeping, and social withdrawal. He also described a recent panic attack that left him feeling scared and uncertain. His primary motivation for seeking help was to understand the underlying causes of his symptoms and develop strategies to manage them effectively."
+      },
+      "BehavioralObservations": {
+        "type": "string",
+        "description": "Observations on patients behavior.e.g:During the assessment, David presented as well-groomed and appropriately dressed. He maintained good eye contact and engaged in the conversation with a collaborative attitude. His speech was clear and coherent, and he demonstrated a good range of emotional expression. He appeared to be introspective and self-aware, often reflecting on his thoughts, feelings, and behaviors. However, he also exhibited some signs of anxiety, such as fidgeting and occasional hesitations in his speech."
+      },
+      "MentalStatusExamination": {
+        "type": "string",
+        "description": "Client's mental state assessment.e.g:David was alert and oriented to time, place, and person. His thought processes were logical and goal-directed. He denied any current suicidal or homicidal ideation. His mood was reported as fluctuating between 7 and 8 on a scale of 10, with a baseline of 7.5. He described his affect as congruent with his mood. There was no evidence of any perceptual disturbances or thought disorder."
+      },
+      "History": {
+        "type": "object",
+        "description": "Various historical background information learned from customer conversations",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Various historical background information learned from customer conversations",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "History name, such as family history, medical history,Developmental history,Educational history, Occupational History,Psychiatric History,Social history,Relationship,etc."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Various historical background information learned from customer conversations"
+                }
+              },
+              "required": ["name", "description"]
+            }
+          }
+        },
+        "required": ["items"]
+      },
+      "AssessmentProcess": {
+        "type": "object",
+        "description": "which Assessment process have been done in this consultation",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Assessment process description",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Assessment process name, such as Clinical Interview,Mental Status Examination,Behavioral Observations, etc.You must include the name of the assessment process and a brief description of what it entails.e.g:Clinical Interview: A comprehensive clinical interview was conducted to gather information about Davids presenting problems, personal history, and current functioning."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Assessment process description"
+                }
+              },
+              "required": ["name", "description"]
+            }
+          }
+        },
+        "required": ["items"]
+      },
+      "PsychologicalAssessment": {
+        "type": "string",
+        "description": "Psychological assessment of the client.e.g:Based on the information gathered during the assessment, David appears to be experiencing an adjustment disorder with mixed anxiety and depressed mood. His symptoms are primarily triggered by the significant stressors associated with launching his startup company, including long work hours, financial concerns, and social isolation. His recent panic attack, although likely exacerbated by an allergic reaction, also reflects the cumulative impact of these stressors on his mental and physical well-being."
+      },
+      "SummaryAndInterpretationOfFindings": {
+        "type": "string",
+        "description": "Summary and interpretation of the findings.e.g:Davids anxiety symptoms, including nightmares, difficulty sleeping, and social withdrawal, are indicative of an adjustment disorder. His avoidance of social situations and reluctance to discuss his emotions are attempts to cope with his anxiety but have inadvertently contributed to feelings of isolation and emotional distance from his family. The recent panic attack, characterized by physical symptoms such as chest tightness and difficulty breathing, represents a significant escalation of his anxiety and has understandably caused him distress. Despite these challenges, David demonstrates several strengths and coping mechanisms. He is proactive in seeking help and has already begun attending mental health workshops to learn new strategies for managing his anxiety. He is also highly disciplined and organized, which has allowed him to maintain his concentration and productivity at work despite the emotional turmoil he is experiencing. His passion for Ironman triathlon training has provided him with a healthy outlet for stress relief and a sense of accomplishment, although he acknowledges that his training has been impacted by his current circumstances."
+      },
+      "SummaryAndFormulation": {
+        "type": "string",
+        "description": "Summary and formulation of the findings.e.g:David is a high-achieving individual who is experiencing an adjustment disorder with mixed anxiety and depressed mood in response to significant life stressors. His symptoms are primarily manifested in poor sleep quality, social withdrawal, and a recent panic attack. While he has developed effective coping mechanisms in the past, including exercise and problem-solving skills, his current circumstances have challenged his ability to manage his anxiety effectively. He is motivated to address his mental health concerns and improve his overall well-being, particularly in his relationships with his family."
+      },
+      "Recommendations": {
+        "type": "object",
+        "description": "Recommendations for the client.",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Recommendation description",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Recommendation name, such as Individual therapy,Sleep hygiene education,Stress management techniques,Family therapy or couples counseling,Continued participation in mental health workshops, etc.You must include the name of the recommendation and a brief description of what it entails.e.g:Individual therapy: David is encouraged to participate in individual therapy to explore the underlying causes of his anxiety and develop coping strategies to manage his symptoms effectively. Cognitive-behavioral therapy (CBT) may be particularly beneficial in helping him challenge negative thought patterns and develop healthier ways of coping with stress."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Recommendation description"
+                }
+              },
+              "required": ["name", "description"]
+            }
+          }
+        },
+        "required": ["items"]
+      },
+      "ActivitiesDescription": {
+        "type": "string",
+        "description": "Description of the activities.e.g:In addition to the traditional therapeutic recommendations, this section emphasizes a positive psychology approach to support David Wong's mental health and personal growth. Positive psychology focuses on building strengths, resilience, and enhancing well-being, rather than merely treating symptoms of mental illness. This method will be incorporated into Davids treatment plan, emphasizing activities and strategies that foster positive emotions, engagement, relationships, meaning, and accomplishment (the PERMA model)."
+      },
+      "ActivitiesList": {
+        "type": "object",
+        "description": "List of Positive Psychology Activities and Recommendations,such as Gratitude Practice,Strength Identification and Use and so on.You can search for more activities in the Positive Psychology field which can be helpful for the client.",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Activity goal",
+              "properties": {
+                "Name": {
+                  "type": "string",
+                  "description": "Activity name.e.g:Gratitude Practice"
+                },
+                "Activity": {
+                  "type": "string",
+                  "description": "Activity Description.e.g:Encourage David to maintain a daily gratitude journal, where he writes down three things he is grateful for each day. This practice fosters a shift from negative thoughts to positive experiences, reinforcing emotional resilience."
+                },
+                "Goal": {
+                  "type": "string",
+                  "description": "Activity goal.e.g:Improve David's emotional outlook by increasing his focus on positive experiences."
+                }
+              },
+              "required": ["Name", "Activity", "Goal"]
+            }
+          }
+        },
+        "required": ["items"]
+      }
+    },
+    "required": [
+      "Clinician",
+      "Client",
+      "Date",
+      "Reason",
+      "BehavioralObservations",
+      "MentalStatusExamination",
+      "History",
+      "AssessmentProcess",
+      "PsychologicalAssessment",
+      "SummaryAndInterpretationOfFindings",
+      "SummaryAndFormulation",
+      "Recommendations",
+      "ActivitiesDescription",
+      "ActivitiesList"
+    ]
+  }
+  
