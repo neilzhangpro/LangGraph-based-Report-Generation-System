@@ -11,7 +11,7 @@ export class googleLLMService {
   constructor(private readonly configService: ConfigService) {
     let proxyaddress = this.configService.get<string>('PROXY_URL');
     const googleConfig: any = {
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash-exp',
       temperature: 0,
       apiKey: this.configService.get<string>('ALL_IN_ONE_KEY'),
     };
