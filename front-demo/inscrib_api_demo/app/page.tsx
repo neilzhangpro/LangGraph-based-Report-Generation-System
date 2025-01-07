@@ -1,8 +1,8 @@
 'use client';
 
-import Image from "next/image";
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from "react";
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [inputValue, setInputValue] = useState<string>('');
@@ -26,7 +26,6 @@ export default function Home() {
 
   const handleGetToken = async () => {
     try {
-
       //判断输入框输入
       if (!inputValue) {
         setError('Please enter your ID.');
@@ -34,16 +33,19 @@ export default function Home() {
       }
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/token?id=${inputValue}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/token?id=${inputValue}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
 
       const data = await response.json();
-      
+
       if (data.access_token) {
         // 存储 token 到 localStorage
         localStorage.setItem('token', data.access_token);
@@ -68,7 +70,7 @@ export default function Home() {
           {error}
         </div>
       )}
-      
+
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
         <Image
           className="dark:invert"
@@ -82,13 +84,13 @@ export default function Home() {
           <p className="text-center text-sm font-[family-name:var(--font-geist-mono)]">
             Click the button below to start.
           </p>
-            <input 
-            type="text" 
-            placeholder="Enter your ID" 
-            value={inputValue} 
-            onChange={(e) => setInputValue(e.target.value)} 
-            className="border-solid" 
-            />
+          <input
+            type="text"
+            placeholder="Enter your ID"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="border-solid"
+          />
           <button
             onClick={handleGetToken}
             disabled={loading}
@@ -105,13 +107,14 @@ export default function Home() {
           href="https://ironmind.ai"
           target="_blank"
           rel="noopener noreferrer"
-        ><Image
-        aria-hidden
-        src="/globe.svg"
-        alt="Globe icon"
-        width={16}
-        height={16}
-      />
+        >
+          <Image
+            aria-hidden
+            src="/globe.svg"
+            alt="Globe icon"
+            width={16}
+            height={16}
+          />
           Ironmind.ai
         </a>
         <a

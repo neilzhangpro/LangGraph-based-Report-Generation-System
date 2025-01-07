@@ -1,8 +1,6 @@
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import * as fs from 'fs';
-import * as path from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,19 +16,20 @@ async function bootstrap() {
       if (!origin) {
         return callback(null, true);
       }
-  
+
       try {
         const url = new URL(origin);
-        
+
         // 检查是否允许访问
-        const isAllowed = 
+        const isAllowed =
           // 允许所有 localhost 端口
-          (url.hostname === 'localhost') ||
+          url.hostname === 'localhost' ||
           // 允许特定 IP 的所有端口
-          (url.hostname === '34.31.147.139') ||
+          url.hostname === '34.31.147.139' ||
           // 允许特定域名（包括子域名）
-          (url.hostname === 'ironmind.ai' || url.hostname.endsWith('.ironmind.ai'));
-  
+          url.hostname === 'ironmind.ai' ||
+          url.hostname.endsWith('.ironmind.ai');
+
         if (isAllowed) {
           callback(null, true);
         } else {
@@ -44,8 +43,10 @@ async function bootstrap() {
     credentials: true, // 如果需要支持跨域携带凭证
     allowedHeaders: 'Content-Type, Accept, Authorization',
     preflightContinue: false,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 204,
   });
+  app.setGlobalPrefix('api');
+
   //swagger
   const config = new DocumentBuilder()
     .setTitle('Inscrib Agent')
@@ -65,7 +66,8 @@ async function bootstrap() {
     )
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
-  await app.listen(3000,'0.0.0.0');
+  SwaggerModule.setup('api-doc', app, document);
+  await app.listen(3000, '0.0.0.0');
 }
+
 bootstrap();
