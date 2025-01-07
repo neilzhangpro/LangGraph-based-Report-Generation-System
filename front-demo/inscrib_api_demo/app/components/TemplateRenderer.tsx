@@ -63,7 +63,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({template, data: init
       }
       console.log('update successful:', response);
       const newContents = await response.json()
-      const newContent = newContents.kwargs.content;
+      const newContent = newContents.output;
       console.log('newContent successful:', newContent);
       // 更新编辑状态中的值
       const updatedEditState = { ...editState, value: newContent };

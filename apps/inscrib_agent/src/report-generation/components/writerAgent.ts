@@ -29,9 +29,9 @@ export class WriterAgentService {
 
   responStructure(TemplatePath?: string) {
     let  Response:any = z.object({
-      Clinician: z.string().describe('The clinician who wrote the report'),
-      Client: z.string().describe('The client who the report is about'),
-      Date: z.string().describe('The date the report was written'),
+      Clinician: z.string().describe('The clinician who wrote the report.If no clinician is specified, just use the term "Clinician".'),
+      Client: z.string().describe('The client who the report is about.If no client is specified, just use the term "Client".'),
+      Date: z.string().describe('The date the report was written.If no date is specified, just use the term "Date to edit".'),
       Reason: z
         .string()
         .describe(
@@ -175,14 +175,13 @@ export class WriterAgentService {
   }
 
   //定义工具
-  getAllTools = async () => {
+  getAllTools = (uid: string) => {
     const searchTool = tool(
       async (query) => {
         console.log('-------------------searchTool----------------------')
         const searchOnline = new TavilySearchResults({
           apiKey: this.configService.get<string>('TAVILY_KEY'),
         });
-        // This is a placeholder, but don't tell the LLM that...
         return await searchOnline.invoke({ query: query });
       },
       {
@@ -193,8 +192,22 @@ export class WriterAgentService {
         }),
       },
     );
-    const tools = [searchTool]
-    return tools;
+  
+    const searchFromRAG = tool(
+      async (query) => {
+        console.log('-------------------searchFromRAG----------------------')
+        return await this.vectorService.multiSearchInChromaDB(uid, JSON.stringify(query));
+      },
+      {
+        name: 'searchFromRAG',
+        description: 'find the search results from local knowledge base.',
+        schema: z.object({
+          query: z.string().describe('The query to use in your search.'),
+        }),
+      },
+    );
+  
+    return [searchTool, searchFromRAG];
   };
 
   //初始分析结构
@@ -223,6 +236,44 @@ export class WriterAgentService {
       Status: 'initial_analysis_complete'
     }
   };
+
+// 定义RAG检索节点
+performRAGSearch = async (state: AgentStateChannels) => {
+  const { Analysis, messages = [],userId } = state;
+  let Error = '';
+  let ragResults = [];
+
+  try {
+    // 1. 症状标准化和提取
+    const symptomExtractionPrompt = ChatPromptTemplate.fromMessages([
+      new SystemMessage(
+        "You are a mental health professional. Extract and standardize psychological symptoms from the analysis. Output as a JSON array of symptoms with their professional terms."
+      ),
+      new HumanMessage(Analysis)
+    ]);
+    
+    const standardizedSymptoms = await symptomExtractionPrompt
+      .pipe(this.googleLLMService.llm)
+      .invoke(messages);
+
+    // 2. 使用RAG模型搜索
+    ragResults = await this.vectorService.multiSearchInChromaDB(userId,JSON.stringify(standardizedSymptoms));
+
+  } catch (error) {
+    Error = error;
+  }
+
+  return {
+    ...state,
+    Error,
+    messages: [...messages, new AIMessage({ content: JSON.stringify(ragResults) })],
+    RAGResults: ragResults,
+    Status: 'rag_search_complete'
+  };
+};
+
+
+
 
   //网络研究节点
   conductResearch = async (state: AgentStateChannels) => {
@@ -274,40 +325,138 @@ export class WriterAgentService {
 
 
 // 报告撰写节点
+// 报告撰写节点
 writeReport = async (state: AgentStateChannels) => {
-  const { Analysis, Research, Chunks, messages = [],TemplatePath } = state;
+  const { Analysis, Research, userId, RAGResults, Chunks, TemplatePath } = state;
+  const messages = state.messages || [];
+  
+  try {
+    const reportStructure = this.responStructure(TemplatePath);
+    const parser = StructuredOutputParser.fromZodSchema(reportStructure);
+    const formatInstructions = parser.getFormatInstructions();
+    const tools = this.getAllTools(userId);
 
-  const parser = new StructuredOutputParser(this.responStructure(TemplatePath));
-  const chain = RunnableSequence.from([
-    ChatPromptTemplate.fromTemplate(
-      "You are a professional report writer. Create a comprehensive report using the analysis and research provided.You should output as a structured json like this: {format_instructions}.Write a professional report based on:\nTranscript: {Chunks}\nAnalysis: {Analysis}\nResearch: {Research}",
-    ),
-    this.googleLLMService.llm,
-    parser,
-  ]);
-  let response = new AIMessage({ content: '' });
-  let Error = '';
-  try{
-  response = await chain.invoke({
-    Chunks:JSON.stringify(Chunks),
-    Analysis:JSON.stringify(Analysis),
-    Research:JSON.stringify(Research),
-    format_instructions:parser.getFormatInstructions(),
-  });
-  console.log('-------------------writeReport----------------------')
-  console.log(response)
-  }catch (error) {
-    console.log(error)
-    Error = error;
+    // Create messages array with proper escaping
+    const systemMessage = new SystemMessage(
+      "You are a professional psychological report writer. Create a comprehensive clinical report that integrates the provided information. " +
+      "If you have dont know some information, you can use the search tool to find it. " +
+      "If you want refer to the local knowledge base which contains the personalized information, you can use the searchFromRAG tool. " +
+      "Some writing requirements: " +
+      "1. A more in-depth analysis of the patient's specific symptoms is required, and a detailed explanation of the correspondence between the patient's symptoms and the diagnostic criteria. " +
+      "2. The treatment suggestions given to patients should be specific, and specific plans should be given based on the patients' actual problems (such as workplace stress, insomnia, etc.). " +
+      "3. The report should include more details about future treatment strategies, such as specific emotion management techniques (e.g., breathing exercises, cognitive behavioral therapy), or long- and short-term goals. " +
+      "Important guidelines: " +
+      "1. Focus ONLY on the client's specific information from the transcript and RAG results " +
+      "2. When using research information: - Only use general psychological concepts and established treatment approaches - DO NOT include specific cases or individual practitioners' opinions - DO NOT attribute any findings or methods to specific doctors or researchers " +
+      "3. Keep all observations and conclusions directly related to THIS client. " +
+      "4. Base all recommendations on the client's specific symptoms and circumstances. " +
+      "5. Maintain professional objectivity throughout the report"
+    );
+
+    const humanMessage = new HumanMessage(
+      `Generate a psychological report using this information:\n\n` +
+      `TRANSCRIPT: ${Chunks ? JSON.stringify(Chunks) : 'No transcript provided'}\n` +
+      `ANALYSIS: ${Analysis || 'No analysis provided'}\n` +
+      `RESEARCH: ${Research || 'No research provided'}\n` +
+      `REFERENCE MATERIALS: ${RAGResults ? JSON.stringify(RAGResults) : 'No references provided'}\n\n` +
+      `${formatInstructions}`
+    );
+
+    // Create prompt template with proper message structure
+    const prompt = ChatPromptTemplate.fromMessages([
+      systemMessage,
+      humanMessage,
+      new MessagesPlaceholder("agent_scratchpad")
+    ]);
+
+    // Create agent with the corrected prompt
+    const agent = await createToolCallingAgent({
+      llm: this.googleLLMService.llm,
+      tools,
+      prompt
+    });
+
+    const agentExecutor = new AgentExecutor({
+      agent,
+      tools,
+      returnIntermediateSteps: true // Add this to help with debugging
+    });
+    
+    // Execute the agent
+    const response = await agentExecutor.invoke({
+      input: humanMessage.content
+    });
+
+    // Perform quality check on the output
+    const qualityCheckedReport = await this.performQualityCheck(response.output);
+
+    return {
+      ...state,
+      messages: [...messages, new AIMessage({ content: JSON.stringify(qualityCheckedReport) })],
+      Report: qualityCheckedReport,
+      Status: 'report_written'
+    };
+
+  } catch (error) {
+    console.error('Report generation error:', error);
+    // Add more detailed error information
+    const errorDetails = {
+      message: error instanceof Error ? error.message : 'Unknown error in report generation',
+      stack: error instanceof Error ? error.stack : undefined,
+      state: {
+        hasAnalysis: !!Analysis,
+        hasResearch: !!Research,
+        hasRAGResults: !!RAGResults,
+        hasChunks: !!Chunks
+      }
+    };
+
+    return {
+      ...state,
+      Error: JSON.stringify(errorDetails),
+      Status: 'report_error',
+      messages: [...messages]
+    };
   }
-  return {
-    ...state,
-    Error,
-    messages: [...messages, response],
-    Report: response,
-    Status: 'report_written'
-  };
+};
+
+
+// 更新质量检查函数
+private async performQualityCheck(report: any) {
+  try {
+    // 为质量检查创建一个新的解析器
+    const parser = StructuredOutputParser.fromZodSchema(this.responStructure());
+    const formatInstructions = parser.getFormatInstructions();
+
+    const qualityCheckPrompt = ChatPromptTemplate.fromMessages([
+      new SystemMessage(`
+        Review and improve this psychological report while maintaining exact JSON format.
+        Make necessary improvements while preserving the structure.
+      `),
+      new HumanMessage(`
+        Review and improve this report: ${JSON.stringify(report)}
+        
+        ${formatInstructions}
+      `)
+    ]);
+
+    // 创建质量检查链
+    const qualityCheckChain = RunnableSequence.from([
+      qualityCheckPrompt,
+      this.googleLLMService.llm,
+      parser
+    ]);
+
+    // 执行质量检查
+    return await qualityCheckChain.invoke({});
+
+  } catch (error) {
+    console.error('Quality check error:', error);
+    return report;
+  }
 }
+
+
 
 //根据指令重新生成部分
 generatePart = async (oldSection:string,prompts:string,uid:string) => {
@@ -321,11 +470,27 @@ generatePart = async (oldSection:string,prompts:string,uid:string) => {
   console.log('-------------------vector----------------------')
   console.log(vector)
   const prompt = ChatPromptTemplate.fromMessages([
-    new SystemMessage(`You are a professional psychoanalyst, and your duty is to modify and process part of a psychological counseling report according to the modification requirements. You must refer to the original psychological counseling conversation record.Your return result can only have the modified text itself, not any redundant answers, otherwise you will be punished. The following is the original conversation record:${JSON.stringify(vector)}, and the following is what needs to be modified. Reporting section:${oldSection} The following are the modification requirements:`),
-    new HumanMessage(prompts)
+    new SystemMessage(`You are a professional psychoanalyst, and your duty is to modify and process part of a psychological counseling report according to the modification requirements. You must refer to the original psychological counseling conversation record.Your return result can only have the modified text itself, not any redundant answers, otherwise you will be punished. The following is the original conversation record:${JSON.stringify(vector)}, and the following is what needs to be modified.You can use the search tool to find any thing you dont know or use searchFromRAG tool to find some psychological knowlage. Reporting section:${oldSection} The following are the modification requirements:`),
+    new HumanMessage(prompts),
+    new MessagesPlaceholder("agent_scratchpad")
   ]);
   try{
-    const response = await prompt.pipe(this.googleLLMService.llm).invoke({});
+    const tools = this.getAllTools(uid);
+    const agent = await createToolCallingAgent({
+      llm: this.googleLLMService.llm,
+      tools,
+      prompt
+    });
+
+    const agentExecutor = new AgentExecutor({
+      agent,
+      tools,
+      returnIntermediateSteps: true // Add this to help with debugging
+    });
+    
+    // Execute the agent
+    const response = await agentExecutor.invoke({});
+
     console.log('-------------------generatePart----------------------')
     console.log(response)
     return response;
@@ -335,36 +500,6 @@ generatePart = async (oldSection:string,prompts:string,uid:string) => {
   
 }
 
-// 报告优化节点
-private async improveReport(state: any) {
-  const { Report, messages = [],Chunks } = state;
-
-  const prompt = ChatPromptTemplate.fromMessages([
-    new SystemMessage(
-      "You are a professional editor. Review and improve the report for clarity, professionalism, and accuracy.reference the raw transcript: {Chunks}.The report is as follows:{Report}",
-    ),
-  ]);
-
-  
-  const parser = new StructuredOutputParser(this.responStructure());
-  const chain = RunnableSequence.from([
-    ChatPromptTemplate.fromTemplate(
-      "You are a professional editor. Review and improve the report for clarity, professionalism, and accuracy.reference the raw transcript: {Chunks}.The report is as follows:{Report}",
-    ),
-    this.googleLLMService.llmOpenAI,
-    parser,
-  ]);
-  const response = await chain.invoke({
-    Chunks:JSON.stringify(Chunks),
-    Report:JSON.stringify(Report),
-  });
-  return {
-    ...state,
-    messages: [...messages, response],
-    Report: response,
-    Status: 'complete'
-  };
-}
 
 
 

@@ -45,6 +45,7 @@
     "llamaindex": "^0.8.22",
     "lucide-react": "^0.462.0",
     "mammoth": "^1.8.0",
+    "nestjs": "^0.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdf-parse": "^1.1.1",

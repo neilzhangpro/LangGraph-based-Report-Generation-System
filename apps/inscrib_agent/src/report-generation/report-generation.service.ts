@@ -20,11 +20,13 @@ export class ReportGenerationService {
     })
       .addNode('loadfiles', this.loadfilesService.loadfiles)
       .addNode('analysis', this.WriterAgentService.initialAnalysis)
+      .addNode('rag_search',this.WriterAgentService.performRAGSearch)
       .addNode('search', this.WriterAgentService.conductResearch)
       .addNode('writeReport', this.WriterAgentService.writeReport)
       .addEdge(START, 'loadfiles')
       .addEdge('loadfiles', 'analysis')
-      .addEdge('analysis', 'search')
+      .addEdge('analysis', 'rag_search')
+      .addEdge('rag_search', 'search')
       .addEdge('search', 'writeReport')
       .addEdge('writeReport', END);
   

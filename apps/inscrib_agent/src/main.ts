@@ -6,42 +6,30 @@ import * as path from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // 确保上传目录存在
-  /*const uploadsDir = path.join(__dirname, '..', 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }*/
-  //开启CORS
+
   app.enableCors({
     origin: (origin, callback) => {
-      // 允许没有 origin 的请求（比如移动端应用）
+      // 允许没有 origin 的请求（包括浏览器直接访问）
       if (!origin) {
         return callback(null, true);
       }
-  
-      try {
-        const url = new URL(origin);
-        
-        // 检查是否允许访问
-        const isAllowed = 
-          // 允许所有 localhost 端口
-          (url.hostname === 'localhost') ||
-          // 允许特定 IP 的所有端口
-          (url.hostname === '34.31.147.139') ||
-          // 允许特定域名（包括子域名）
-          (url.hostname === 'ironmind.ai' || url.hostname.endsWith('.ironmind.ai'));
-  
-        if (isAllowed) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      } catch (err) {
-        callback(new Error('Invalid origin'));
+
+      const allowedOrigins = [
+        /^http:\/\/localhost(:\d+)?$/,        // 所有 localhost 端口
+        /^http:\/\/34\.31\.147\.139(:\d+)?$/, // 特定 IP 的所有端口
+        /^https?:\/\/(.*\.)?ironmind\.ai$/    // ironmind.ai 及其子域名
+      ];
+
+      const isAllowed = allowedOrigins.some(pattern => pattern.test(origin));
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Not allowed by CORS: ${origin}`));
       }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true, // 如果需要支持跨域携带凭证
+    credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',
     preflightContinue: false,
     optionsSuccessStatus: 204
