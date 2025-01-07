@@ -8,6 +8,7 @@ export interface AgentStateChannels {
   Chunks?: Document[];
   Error?: string;
   userId?: string;
+  RAGResults?: object;
   Report?: object;
   Analysis?: string;
   Research?: string;

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { TemplateField } from '@/app/type/template';
-import { Pencil, Sparkles, X } from 'lucide-react';
+import { Pencil, X, Sparkles } from "lucide-react";
 
 interface TemplateRendererProps {
   template: { [key: string]: TemplateField };
@@ -16,11 +16,7 @@ interface EditState {
   prompts: string;
 }
 
-const TemplateRenderer: React.FC<TemplateRendererProps> = ({
-  template,
-  data: initialData,
-  onUpdate,
-}) => {
+const TemplateRenderer: React.FC<TemplateRendererProps> = ({template, data: initialData,  onUpdate }) => {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,26 +47,23 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         return;
       }
       // 确保同时发送 prompts 和原始文本
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/report-generation/reGernatePart`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            prompts: editState.prompts,
-            oldSection: editState.value,
-          }),
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/report-generation/reGernatePart`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-      );
+        body: JSON.stringify({
+          prompts: editState.prompts,
+          oldSection: editState.value
+        })
+      });
       if (!response.ok) {
         throw new Error('Failed to update content');
       }
       console.log('update successful:', response);
-      const newContents = await response.json();
-      const newContent = newContents.kwargs.content;
+      const newContents = await response.json()
+      const newContent = newContents.output;
       console.log('newContent successful:', newContent);
       // 更新编辑状态中的值
       const updatedEditState = { ...editState, value: newContent };
@@ -106,9 +99,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
       setError(null);
     } catch (error) {
       console.error('Failed to update:', error);
-      setError(
-        error instanceof Error ? error.message : 'Failed to update content',
-      );
+      setError(error instanceof Error ? error.message : 'Failed to update content');
     } finally {
       setLoading(false);
     }
@@ -117,7 +108,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   const renderEditableContent = (
     value: string,
     path: string[],
-    isMultiline: boolean = false,
+    isMultiline: boolean = false
   ) => {
     const isEditing = editState?.path.join('.') === path.join('.');
 
@@ -126,9 +117,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         <div className="space-y-4 w-full">
           {/* 原始内容显示 */}
           <div className="p-4 bg-gray-50 rounded-md">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">
-              Original Content:
-            </h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Original Content:</h4>
             <div className="text-gray-600 whitespace-pre-wrap">{value}</div>
           </div>
 
@@ -139,16 +128,16 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
             </label>
             <textarea
               value={editState.prompts}
-              onChange={(e) =>
-                setEditState({ ...editState, prompts: e.target.value })
-              }
+              onChange={(e) => setEditState({ ...editState, prompts: e.target.value })}
               className="w-full border border-gray-300 rounded-md p-2 min-h-[80px]"
               placeholder="Enter your prompts here..."
             />
           </div>
 
           {/* 错误信息显示 */}
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {error && (
+            <div className="text-red-500 text-sm">{error}</div>
+          )}
 
           {/* 按钮组 */}
           <div className="flex space-x-2">
@@ -188,42 +177,21 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     );
   };
 
-  const renderField = (
-    field: TemplateField,
-    fieldData: any,
-    fieldName: string,
-    path: string[] = [],
-  ) => {
+  const renderField = (field: TemplateField, fieldData: any, fieldName: string, path: string[] = []) => {
     switch (field.type) {
       case 'string':
-        return renderStringField(fieldName, fieldData, field.description, [
-          ...path,
-          fieldName,
-        ]);
+        return renderStringField(fieldName, fieldData, field.description, [...path, fieldName]);
       case 'object':
         if (field.properties?.items) {
-          return renderArrayField(
-            fieldName,
-            fieldData,
-            field.properties.items,
-            [...path, fieldName],
-          );
+          return renderArrayField(fieldName, fieldData, field.properties.items, [...path, fieldName]);
         }
-        return renderObjectField(fieldName, fieldData, field.properties || {}, [
-          ...path,
-          fieldName,
-        ]);
+        return renderObjectField(fieldName, fieldData, field.properties || {}, [...path, fieldName]);
       default:
         return null;
     }
   };
 
-  const renderStringField = (
-    name: string,
-    value: string,
-    description?: string,
-    path: string[] = [],
-  ) => (
+  const renderStringField = (name: string, value: string, description?: string, path: string[] = []) => (
     <div className="mb-6 bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
       <h3 className="text-lg font-semibold text-gray-800 mb-2">
         {formatFieldName(name)}
@@ -232,14 +200,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     </div>
   );
 
-  const renderObjectField = (
-    name: string,
-    data: any,
-    properties: {
-      [key: string]: TemplateField;
-    },
-    path: string[] = [],
-  ) => {
+  const renderObjectField = (name: string, data: any, properties: { [key: string]: TemplateField }, path: string[] = []) => {
     if (!data) return null;
 
     return (
@@ -258,12 +219,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     );
   };
 
-  const renderArrayField = (
-    name: string,
-    data: any,
-    itemTemplate: any,
-    path: string[] = [],
-  ) => {
+  const renderArrayField = (name: string, data: any, itemTemplate: any, path: string[] = []) => {
     if (!data?.items || !Array.isArray(data.items)) return null;
 
     return (
@@ -277,18 +233,11 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
 
             if (item.name && item.description) {
               return (
-                <div
-                  key={index}
-                  className="bg-gray-50 rounded-lg p-4 group relative"
-                >
+                <div key={index} className="bg-gray-50 rounded-lg p-4 group relative">
                   <h4 className="font-medium text-gray-800 mb-2">
                     {renderEditableContent(item.name, [...itemPath, 'name'])}
                   </h4>
-                  {renderEditableContent(
-                    item.description,
-                    [...itemPath, 'description'],
-                    true,
-                  )}
+                  {renderEditableContent(item.description, [...itemPath, 'description'], true)}
                 </div>
               );
             }
@@ -302,10 +251,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
                   <div className="space-y-2">
                     <div>
                       <span className="font-medium">Activity: </span>
-                      {renderEditableContent(item.Activity, [
-                        ...itemPath,
-                        'Activity',
-                      ])}
+                      {renderEditableContent(item.Activity, [...itemPath, 'Activity'])}
                     </div>
                     <div>
                       <span className="font-medium">Goal: </span>
@@ -337,7 +283,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   const formatFieldName = (name: string) => {
     return name
       .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (str) => str.toUpperCase())
+      .replace(/^./, str => str.toUpperCase())
       .trim();
   };
 

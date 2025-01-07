@@ -1,85 +1,60 @@
+
+## Ironmin.ai
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+  <img src="https://img1.wsimg.com/isteam/ip/efd330b5-ca4b-4e3c-8302-33732f424e1b/Logo_No%20Tag.png/:/rs=w:130,h:102,cg=true,m/cr=w:130,h:102/qt=q:95" alt="Ironmin.ai Logo">
+</p>
+<p align="center">
+  <strong>Intelligent | Friendly | Doctor's Assistant</strong>
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+### Introduction
+This repository contains the backend API of the AI system and a frontend call example:
+- apps/inscrib_agent: This is the backend of the AI system
+- front-demo/inscrib_api_demo: This is a frontend call example
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ yarn install
+### User Guide
+- Clone the repository
 ```
-
-## Compile and run the project
-
-```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
+git clone https://github.com/neilzhangpro/ironmind-LLM.git
 ```
-
-## Run tests
-
-```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
+- Install Docker and Docker Compose on the server
+- Modify docker-compose-google.yml
 ```
+frontend:
+  build:
+    context: ./front-demo/inscrib_api_demo
+    dockerfile: Dockerfile
+    args:
+    - NEXT_PUBLIC_API_URL=http://localhost:3002  # For browser access use localhost
+    - NEXT_SERVER_API_URL=http://app:3000        # For server-side access use container name
+  restart: always
+  ports:
+    - "3001:3001"
+  environment:
+    - PORT=3001
+    - NEXT_PUBLIC_API_URL=http://localhost:3002    # For browser use
+    - NEXT_SERVER_API_URL=http://app:3000          # For server use
+    - NODE_ENV=production
+  networks:
+    - app-network
+```
+Change the URL of NEXT_PUBLIC_API_URL to an accessible domain address
+- Start using Docker Compose
+```
+docker-compose -f docker-compose-google.yml up -d --build
+```
+## 202501 Optimization
+- Fixed LLM call source to gemini
+- Added RAG multi-query optimization, which will refer to the user's uploaded professional materials when writing reports
+- Added other measures to improve report quality
+- Modified the report section modification interface function, so that it can also refer to professional knowledge bases or the internet
+- We proudly use the powerful ***Gemini 2.0 Flash*** model!
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## System Integration
+- Uploaded audio script files must be in .txt, .pdx, or .docx format
+- The audio file must explicitly state the patient's name, doctor's title, and consultation time at the beginning, otherwise, the report generation may produce hallucinations.
+- The report template file is located at front-demo/inscrib_api_demo/public/01.json (note that the description field is a prompt field, and writing requirements for that part can be added)
+- API address: http://localhost:8000/api
+This repository contains the backend API of the AI system and a frontend call example:
+- apps/inscrib_agent: This is the backend of the AI system
+- front-demo/inscrib_api_demo: This is a frontend call example
