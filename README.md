@@ -6,7 +6,8 @@
 <p align="center">
   <strong>Intelligent | Friendly | Doctor's Assistant</strong>
 </p>
-## Introduction
+
+### Introduction
 This repository contains the backend API of the AI system and a frontend call example:
 - apps/inscrib_agent: This is the backend of the AI system
 - front-demo/inscrib_api_demo: This is a frontend call example
