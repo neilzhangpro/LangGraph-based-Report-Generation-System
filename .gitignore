@@ -151,3 +151,4 @@ uploads/
 # Application specific
 apps/inscrib_agent/src/temp/
 apps/inscrib_agent/uploads/
+google.env
