@@ -10,7 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }), // 添加这行
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'ironmindllm',
+      secret: process.env.JWT_SECRET || 'default_jwt_secret_key',
       signOptions: { expiresIn: '1y' },
     }),
   ],

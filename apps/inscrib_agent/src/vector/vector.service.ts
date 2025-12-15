@@ -34,6 +34,11 @@ interface SearchOptions {
 
 
 
+/**
+ * Service for managing vector database operations using ChromaDB.
+ * Handles document storage, retrieval, and semantic search with user isolation.
+ * Supports basic search, multi-query retrieval, and advanced search with reranking.
+ */
 @Injectable()
 export class VectorService implements OnModuleInit {
     private embeddings: Embeddings;
@@ -111,7 +116,17 @@ export class VectorService implements OnModuleInit {
     }
     
 
-    // 基础检索方法
+    /**
+     * Performs a basic semantic search in ChromaDB with user isolation.
+     * 
+     * @param {string} source - User ID for filtering documents (ensures user isolation)
+     * @param {string} question - Search query string
+     * @returns {Promise<Document[]>} Array of relevant documents matching the query
+     * @throws {Error} If search operation fails
+     * 
+     * @example
+     * const docs = await vectorService.searchInChromaDB('user123', 'anxiety symptoms');
+     */
     async searchInChromaDB(source: string, question: string): Promise<Document[]> {
         try {
             const retriever = this.chromaClient.asRetriever({
@@ -125,7 +140,18 @@ export class VectorService implements OnModuleInit {
         }
     }
 
-    //多重检索
+    /**
+     * Performs multi-query retrieval for improved search results.
+     * Uses LLM to generate multiple query variants and merges results.
+     * 
+     * @param {string} sources - User ID for document filtering
+     * @param {string} question - Original search query
+     * @returns {Promise<Document[]>} Array of documents with relevance scores
+     * @throws {Error} If multi-query search fails
+     * 
+     * @example
+     * const docs = await vectorService.multiSearchInChromaDB('user123', 'treatment options');
+     */
     async multiSearchInChromaDB(sources: string, question: string): Promise<Document[]> {
         try {
             // 1. 创建基础检索器
@@ -162,7 +188,14 @@ export class VectorService implements OnModuleInit {
     }
     
     
-    // 添加相关性分数计算方法
+    /**
+     * Calculates a simple relevance score based on term matching.
+     * 
+     * @private
+     * @param {Document} doc - Document to score
+     * @param {string} query - Search query
+     * @returns {number} Relevance score between 0 and 1
+     */
     private calculateRelevanceScore(doc: Document, query: string): number {
         try {
             // 简单的相关性计算示例
@@ -183,7 +216,25 @@ export class VectorService implements OnModuleInit {
     }
     
    
-    // 添加高级检索方法
+    /**
+     * Advanced multi-query search with configurable options and optional reranking.
+     * 
+     * @param {string} question - Search query
+     * @param {SearchOptions} options - Search configuration options
+     * @param {number} options.similarityK - Number of final results to return (default: 4)
+     * @param {number} options.fetchK - Number of initial results to fetch (default: 20)
+     * @param {Record<string, any>} options.filter - Metadata filter for documents
+     * @param {boolean} options.rerank - Whether to rerank results using semantic scoring (default: true)
+     * @returns {Promise<Document[]>} Array of top-ranked documents
+     * @throws {Error} If advanced search fails
+     * 
+     * @example
+     * const docs = await vectorService.advancedMultiSearch('depression treatment', {
+     *   similarityK: 5,
+     *   fetchK: 30,
+     *   rerank: true
+     * });
+     */
     async advancedMultiSearch(
         question: string, 
         options: SearchOptions = {}
@@ -268,6 +319,18 @@ export class VectorService implements OnModuleInit {
     }
     
 
+    /**
+     * Stores multiple documents directly in ChromaDB with auto-generated IDs.
+     * 
+     * @param {Document[]} documents - Array of documents to store
+     * @returns {Promise<void>}
+     * @throws {Error} If storage operation fails
+     * 
+     * @example
+     * await vectorService.storeInChromaDBDirectly([
+     *   { pageContent: 'Text', metadata: { source: 'user123' } }
+     * ]);
+     */
     async storeInChromaDBDirectly(documents: Document[]): Promise<void> {
         try {
             await this.chromaClient.addDocuments(documents, {
@@ -279,6 +342,20 @@ export class VectorService implements OnModuleInit {
         }
     }
 
+    /**
+     * Stores a single document from an uploaded file in ChromaDB.
+     * Automatically includes user ID in metadata for isolation.
+     * 
+     * @param {Express.Multer.File} file - Uploaded file object
+     * @param {string} text - Document text content
+     * @param {object} auth - Authentication object
+     * @param {string} auth.id - User ID for document isolation
+     * @returns {Promise<void>}
+     * @throws {Error} If storage operation fails
+     * 
+     * @example
+     * await vectorService.storeInChromaDB(file, 'Document content', { id: 'user123' });
+     */
     async storeInChromaDB(
         file: Express.Multer.File, 
         text: string, 

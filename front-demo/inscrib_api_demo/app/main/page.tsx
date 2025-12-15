@@ -12,7 +12,7 @@ export default function Main() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [isShowReport, setIsShowReport] = useState<boolean>(false);
-  const [loadingText, setLoadingText] = useState('Ironmind thinking...');
+  const [loadingText, setLoadingText] = useState('Processing...');
   const reportDatas = {
     UploadFile: '',
     TemplatePath: 'http://localhost:3001/01.json',
@@ -78,10 +78,10 @@ export default function Main() {
   useEffect(() => {
     if (loading) {
       const txts = [
-        'Ironmind Thinking...',
-        'Ironmind Analyzing...',
-        'Ironmind Generating...',
-        'Ironmind Writing...',
+        'Analyzing...',
+        'Processing...',
+        'Generating...',
+        'Writing...',
       ];
       let i = 0;
       const interval = setInterval(() => {
@@ -166,7 +166,7 @@ export default function Main() {
         {/* 导航栏内容保持不变 */}
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold text-gray-800">Ironmind.ai</h1>
+            <h1 className="text-xl font-bold text-gray-800">LangGraph Report Generator</h1>
           </div>
 
           <div className="flex items-center space-x-6">
@@ -256,7 +256,7 @@ export default function Main() {
       <footer className="bg-white shadow-md mt-auto">
         <div className="max-w-7xl mx-auto py-6 px-4">
           <div className="flex justify-center text-gray-500">
-            © 2024 Ironmind.ai All rights reserved.
+            © 2024 LangGraph Report Generation System
           </div>
         </div>
       </footer>

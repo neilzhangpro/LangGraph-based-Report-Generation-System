@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Ironmind.ai",
-  description: "A master of the psychological health report",
+  title: "LangGraph Report Generator",
+  description: "AI-powered report generation system using LangGraph workflows",
 };
 
 export default function RootLayout({

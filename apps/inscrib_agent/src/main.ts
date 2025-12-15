@@ -16,8 +16,7 @@ async function bootstrap() {
 
       const allowedOrigins = [
         /^http:\/\/localhost(:\d+)?$/,        // 所有 localhost 端口
-        /^http:\/\/34\.31\.147\.139(:\d+)?$/, // 特定 IP 的所有端口
-        /^https?:\/\/(.*\.)?ironmind\.ai$/    // ironmind.ai 及其子域名
+        /^http:\/\/127\.0\.0\.1(:\d+)?$/,     // 127.0.0.1 所有端口
       ];
 
       const isAllowed = allowedOrigins.some(pattern => pattern.test(origin));
@@ -38,10 +37,10 @@ async function bootstrap() {
 
   //swagger
   const config = new DocumentBuilder()
-    .setTitle('Inscrib Agent')
-    .setDescription('The inscrib agent API description')
+    .setTitle('LangGraph Report Generation API')
+    .setDescription('API for LangGraph-based report generation system')
     .setVersion('1.0')
-    .addTag('inscrib agent')
+    .addTag('report-generation')
     .addBearerAuth(
       {
         type: 'http',

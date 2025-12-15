@@ -72,14 +72,7 @@ export default function Home() {
       )}
 
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/iron.svg"
-          alt="Ironmind logo"
-          width={220}
-          height={45}
-          priority
-        />
+        <h1 className="text-3xl font-bold">LangGraph Report Generator</h1>
         <div className="flex flex-col items-center gap-6 w-full">
           <p className="text-center text-sm font-[family-name:var(--font-geist-mono)]">
             Click the button below to start.
@@ -104,7 +97,7 @@ export default function Home() {
       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://ironmind.ai"
+          href="https://github.com/langchain-ai/langgraph"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -115,11 +108,11 @@ export default function Home() {
             width={16}
             height={16}
           />
-          Ironmind.ai
+          LangGraph
         </a>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://github.com/neilzhangpro"
+          href="https://github.com"
           target="_blank"
           rel="noopener noreferrer"
         >
